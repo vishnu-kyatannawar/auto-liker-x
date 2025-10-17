@@ -1,16 +1,18 @@
-# LinkedIn Posts Liker & Resharer
+# LinkedIn Posts Liker
 
-Automated tool to monitor LinkedIn pages, like new posts, and reshare them automatically.
+Automated tool to monitor LinkedIn pages and automatically like new posts.
 
 ## Features
 
 - Monitors multiple LinkedIn company/personal pages
 - Automatically likes new posts
-- Automatically reshares new posts
+- Finds last liked post and processes only newer posts
+- Processes posts from oldest to newest
 - Tracks processed posts to avoid duplicates
 - Runs on a configurable schedule
 - Headless browser automation using Playwright
 - Persistent browser session - login once, no repeated verification
+- Detailed summary report after each run
 
 ## Setup
 
@@ -41,6 +43,7 @@ LINKEDIN_PASSWORD=your-password
 CHECK_INTERVAL_MINUTES=60
 LINKEDIN_PAGES=https://www.linkedin.com/company/your-company/,https://www.linkedin.com/in/some-person/
 HEADLESS=false
+CSV_LOG_PATH=./logs/linkedin-bot-results.csv
 ```
 
 **Environment Variables:**
@@ -49,6 +52,7 @@ HEADLESS=false
 - `CHECK_INTERVAL_MINUTES` - How often to check for new posts (default: 60)
 - `LINKEDIN_PAGES` - Comma-separated list of LinkedIn pages to monitor
 - `HEADLESS` - Set to `true` to run browser in background, `false` to see browser window
+- `CSV_LOG_PATH` - Path to CSV log file for tracking results (default: ./linkedin-bot-results.csv)
 
 ## Usage
 
@@ -89,16 +93,30 @@ Runs with auto-restart on file changes.
 ## How It Works
 
 1. Launches browser with persistent session (saved in `.browser-data/`)
-2. Checks if already logged in, if not, logs in using your credentials
+2. Logs in to LinkedIn (or restores existing session)
 3. On first login, waits for you to complete any verification manually
-4. Visits each page in your config
-5. Finds all posts on the page
-6. For each new post (not previously processed):
+4. Visits each configured LinkedIn page
+5. Sorts posts by "Recent"
+6. Scrolls down to find the last post you already liked
+7. Processes all posts above that (newer posts) from oldest to newest:
    - Clicks the "Like" button
-   - Clicks "Repost" to reshare
    - Saves the post ID to avoid processing again
-7. Waits for the configured interval
-8. Repeats (using saved session, no re-login needed)
+8. Shows detailed summary (total posts, successful likes, failures)
+9. Waits for the configured interval
+10. Repeats (using saved session, no re-login needed)
+
+## CSV Logging
+
+All run results are automatically logged to a CSV file with the following information:
+- **Timestamp (IST)** - When the check was performed (Indian Standard Time)
+- **Page** - LinkedIn page URL that was checked
+- **New Posts Found** - Number of new posts detected
+- **Successfully Liked** - Number of posts successfully liked
+- **Failed/Skipped** - Number of posts that failed or were skipped
+- **Status** - SUCCESS, PARTIAL, ERROR, or TIMEOUT
+- **Error Message** - Details if any error occurred
+
+The CSV file is created automatically at the path specified in `CSV_LOG_PATH` environment variable. If the directory doesn't exist, it will be created.
 
 ## Notes
 
@@ -107,6 +125,7 @@ Runs with auto-restart on file changes.
 - **Post Tracking**: Posts are tracked in `processed-posts.json` to avoid duplicate actions
 - **Rate Limiting**: The tool includes delays between actions to avoid LinkedIn rate limits
 - **First Run**: LinkedIn may require verification on first login - complete it manually in the browser window
+- **CSV Logs**: All results are logged to CSV with IST timestamps for easy tracking and analysis
 
 ## Troubleshooting
 

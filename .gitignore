@@ -3,6 +3,8 @@ dist/
 .env
 processed-posts.json
 *.log
+*.csv
+logs/
 .DS_Store
 playwright-report/
 test-results/

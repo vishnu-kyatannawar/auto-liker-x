@@ -2,6 +2,15 @@ import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import path from 'path';
 import storage from './storage';
 
+export interface PageResult {
+  page: string;
+  newPostsFound: number;
+  successfulLikes: number;
+  failedPosts: number;
+  status: 'SUCCESS' | 'ERROR' | 'TIMEOUT' | 'PARTIAL';
+  errorMessage?: string;
+}
+
 export class LinkedInBot {
   private browser: Browser | null = null;
   private context: BrowserContext | null = null;
@@ -25,6 +34,7 @@ export class LinkedInBot {
     this.context = await chromium.launchPersistentContext(this.userDataDir, {
       headless: this.headless,
       slowMo: this.headless ? 0 : 100,
+      viewport: { width: 1920, height: 1080 },
     });
 
     this.browser = this.context.browser()!;
@@ -39,31 +49,27 @@ export class LinkedInBot {
   private async ensureLoggedIn(): Promise<void> {
     if (!this.page) throw new Error('Page not initialized');
 
-    console.log('Checking login status...');
+    console.log('Performing login...');
 
     try {
-      // Try to go to feed page with a more lenient wait condition
-      await this.page.goto('https://www.linkedin.com/feed/', {
+      // Always go to login page
+      await this.page.goto('https://www.linkedin.com/login', {
         waitUntil: 'domcontentloaded',
         timeout: 60000
       });
 
-      // Wait a bit for redirects
+      // Wait for page to load
       await this.page.waitForTimeout(2000);
 
-      const url = this.page.url();
-
-      // If we're already logged in, the URL should contain /feed/
-      if (url.includes('/feed/')) {
+      // Check if already logged in (LinkedIn might redirect to feed)
+      const currentUrl = this.page.url();
+      if (currentUrl.includes('/feed/')) {
         console.log('Already logged in (session restored)');
         return;
       }
 
-      // Otherwise, perform login
-      console.log('Not logged in, performing login...');
-      await this.page.goto('https://www.linkedin.com/login', { waitUntil: 'domcontentloaded' });
-
       // Fill in credentials
+      console.log('Filling in credentials...');
       await this.page.fill('#username', this.email);
       await this.page.fill('#password', this.password);
       await this.page.click('button[type="submit"]');
@@ -73,8 +79,8 @@ export class LinkedInBot {
       await this.page.waitForTimeout(3000);
 
       // Check if login was successful or needs verification
-      const currentUrl = this.page.url();
-      if (currentUrl.includes('/checkpoint/')) {
+      const postLoginUrl = this.page.url();
+      if (postLoginUrl.includes('/checkpoint/')) {
         console.log('\n⚠️  VERIFICATION REQUIRED ⚠️');
         console.log('Please complete the verification in the browser window.');
         console.log('Waiting for you to complete verification...\n');
@@ -82,14 +88,16 @@ export class LinkedInBot {
         // Wait for user to complete verification (max 5 minutes)
         await this.page.waitForURL('**/feed/**', { timeout: 300000 });
         console.log('✓ Verification completed! Session saved for future runs.');
-      } else if (currentUrl.includes('/login')) {
+      } else if (postLoginUrl.includes('/login')) {
         throw new Error('Login failed. Please check credentials.');
-      } else {
+      } else if (postLoginUrl.includes('/feed/')) {
         console.log('Successfully logged in to LinkedIn');
+      } else {
+        console.log('Login completed, navigated to:', postLoginUrl);
       }
     } catch (error) {
       if (error instanceof Error && error.message.includes('Timeout')) {
-        console.log('⚠️  Page load timeout - checking if already logged in...');
+        console.log('⚠️  Page load timeout - checking current status...');
         const url = this.page.url();
         if (url.includes('/feed/')) {
           console.log('Already logged in (session restored)');
@@ -100,97 +108,216 @@ export class LinkedInBot {
     }
   }
 
-  async checkPageForNewPosts(pageUrl: string): Promise<number> {
-    if (!this.page) throw new Error('Page not initialized');
+  async checkPageForNewPosts(pageUrl: string): Promise<PageResult> {
+    const result: PageResult = {
+      page: pageUrl,
+      newPostsFound: 0,
+      successfulLikes: 0,
+      failedPosts: 0,
+      status: 'SUCCESS'
+    };
 
-    console.log(`\nChecking page: ${pageUrl}`);
-    await this.page.goto(pageUrl, {
-      waitUntil: 'domcontentloaded',
-      timeout: 60000
-    });
+    try {
+      if (!this.page) throw new Error('Page not initialized');
 
-    // Wait for posts to load
-    await this.page.waitForTimeout(3000);
+      console.log(`\nChecking page: ${pageUrl}`);
 
-    // Sort posts by Recent
-    await this.sortByRecent();
-
-    // TESTING: Stop here to verify sorting works
-    console.log('\n✓ Testing mode: Stopped after sorting posts');
-    console.log('Please verify the posts are sorted by Recent in the browser');
-    console.log('Waiting for 60 seconds before closing...\n');
-    await this.page.waitForTimeout(60000);
-    return 0;
-
-    // Scroll to load more posts
-    await this.page.evaluate(() => window.scrollTo(0, 1000));
-    await this.page.waitForTimeout(2000);
-
-    // Find all post containers
-    const posts = await this.page.$$('div[data-urn*="activity"]');
-    console.log(`Found ${posts.length} posts on the page`);
-
-    let newPostsProcessed = 0;
-
-    for (const post of posts) {
       try {
-        // Extract post URN (unique identifier)
-        const urnAttribute = await post.getAttribute('data-urn');
-        if (!urnAttribute) continue;
-
-        const postId = urnAttribute;
-
-        // Skip if already processed
-        if (storage.isProcessed(postId)) {
-          console.log(`Skipping already processed post: ${postId}`);
-          continue;
-        }
-
-        console.log(`Processing new post: ${postId}`);
-
-        // Like the post
-        await this.likePost(post);
-
-        // Reshare the post
-        await this.resharePost(post);
-
-        // Mark as processed
-        storage.markAsProcessed(postId);
-        newPostsProcessed++;
-
-        // Add delay between actions to avoid rate limiting
-        await this.page.waitForTimeout(2000);
+        await this.page.goto(pageUrl, {
+          waitUntil: 'domcontentloaded',
+          timeout: 60000
+        });
       } catch (error) {
-        console.error('Error processing post:', error);
+        result.status = 'TIMEOUT';
+        result.errorMessage = `Page load timeout: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        return result;
       }
-    }
 
-    console.log(`Processed ${newPostsProcessed} new posts from ${pageUrl}`);
-    return newPostsProcessed;
+      // Wait for posts to load
+      await this.page.waitForTimeout(3000);
+
+      // Sort posts by Recent
+      await this.sortByRecent();
+
+      // Scroll down to find the last liked post
+      const lastLikedPostIndex = await this.findLastLikedPost();
+
+      if (lastLikedPostIndex === -1) {
+        console.log('No liked posts found, will process all posts');
+      } else {
+        console.log(`Found last liked post at index ${lastLikedPostIndex}`);
+      }
+
+      // Get all posts
+      const allPosts = await this.page.$$('div[data-urn*="activity"]');
+      console.log(`Found ${allPosts.length} total posts on the page`);
+
+      // Process only posts after the last liked one (newer posts)
+      const postsToProcess = lastLikedPostIndex === -1
+        ? allPosts
+        : allPosts.slice(0, lastLikedPostIndex).reverse(); // Reverse to go from oldest to newest
+
+      result.newPostsFound = postsToProcess.length;
+      console.log(`Will process ${postsToProcess.length} new posts (from oldest to newest)`);
+
+      for (const post of postsToProcess) {
+        try {
+          // Extract post URN (unique identifier)
+          const urnAttribute = await post.getAttribute('data-urn');
+          if (!urnAttribute) continue;
+
+          const postId = urnAttribute;
+
+          // Skip if already processed
+          if (storage.isProcessed(postId)) {
+            console.log(`Skipping already processed post: ${postId}`);
+            continue;
+          }
+
+          console.log(`Processing new post: ${postId}`);
+
+          // Scroll the post into view
+          await post.scrollIntoViewIfNeeded();
+          await this.page.waitForTimeout(500);
+
+          // Like the post
+          const liked = await this.likePost(post);
+
+          if (liked) {
+            result.successfulLikes++;
+          } else {
+            result.failedPosts++;
+          }
+
+          // Mark as processed
+          storage.markAsProcessed(postId);
+
+          // Add delay between actions to avoid rate limiting
+          await this.page.waitForTimeout(2000);
+        } catch (error) {
+          console.error('Error processing post:', error);
+          result.failedPosts++;
+        }
+      }
+
+      // Determine final status
+      if (result.failedPosts > 0 && result.successfulLikes === 0) {
+        result.status = 'ERROR';
+      } else if (result.failedPosts > 0) {
+        result.status = 'PARTIAL';
+      }
+
+      // Log summary
+      console.log('\n=== SUMMARY ===');
+      console.log(`✓ Process completed: ${result.status}`);
+      console.log(`New posts found: ${result.newPostsFound}`);
+      console.log(`Successfully liked: ${result.successfulLikes}`);
+      console.log(`Failed/Skipped: ${result.failedPosts}`);
+      console.log(`Page: ${pageUrl}`);
+      console.log('===============\n');
+
+      return result;
+    } catch (error) {
+      result.status = 'ERROR';
+      result.errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error checking page:', error);
+      return result;
+    }
   }
 
-  private async likePost(postElement: any): Promise<void> {
+  private async likePost(postElement: any): Promise<boolean> {
     try {
       // Find the like button within the post
       const likeButton = await postElement.$('button[aria-label*="Like"]');
 
       if (!likeButton) {
-        console.log('Like button not found');
-        return;
+        console.log('❌ Like button not found');
+        return false;
       }
 
       // Check if already liked
       const ariaPressed = await likeButton.getAttribute('aria-pressed');
       if (ariaPressed === 'true') {
-        console.log('Post already liked');
-        return;
+        console.log('⚠️  Post already liked');
+        return false;
       }
 
       await likeButton.click();
       console.log('✓ Liked post');
       await this.page?.waitForTimeout(1000);
+      return true;
     } catch (error) {
-      console.error('Error liking post:', error);
+      console.error('❌ Error liking post:', error);
+      return false;
+    }
+  }
+
+  private async findLastLikedPost(): Promise<number> {
+    if (!this.page) return -1;
+
+    try {
+      console.log('Scrolling to find last liked post...');
+
+      // Scroll to top first
+      await this.page.evaluate(() => window.scrollTo(0, 0));
+      await this.page.waitForTimeout(1000);
+
+      let previousPostCount = 0;
+      let scrollAttempts = 0;
+      const maxScrollAttempts = 50; // Increased to allow more scrolling
+
+      while (scrollAttempts < maxScrollAttempts) {
+        // Get all posts currently loaded
+        const posts = await this.page.$$('div[data-urn*="activity"]');
+        const currentPostCount = posts.length;
+
+        console.log(`Checking ${currentPostCount} posts... (scroll attempt ${scrollAttempts + 1})`);
+
+        // Check each post for like status
+        for (let i = 0; i < posts.length; i++) {
+          const post = posts[i];
+          try {
+            const likeButton = await post.$('button[aria-label*="Like"]');
+
+            if (likeButton) {
+              const ariaPressed = await likeButton.getAttribute('aria-pressed');
+              if (ariaPressed === 'true') {
+                console.log(`✓ Found liked post at index ${i} (total ${currentPostCount} posts loaded)`);
+                // Scroll this post into view
+                await post.scrollIntoViewIfNeeded();
+                await this.page.waitForTimeout(1000);
+                return i;
+              }
+            }
+          } catch (e) {
+            // Skip posts that cause errors
+            continue;
+          }
+        }
+
+        // Check if we've loaded new posts
+        if (currentPostCount === previousPostCount) {
+          console.log(`No new posts loaded after scrolling (still at ${currentPostCount} posts)`);
+          console.log('⚠️  Reached end of available posts, no liked posts found');
+          break;
+        }
+
+        previousPostCount = currentPostCount;
+
+        // Scroll down to load more posts
+        await this.page.evaluate(() => window.scrollBy(0, 1500));
+        await this.page.waitForTimeout(3000); // Increased wait time to allow posts to load
+        scrollAttempts++;
+      }
+
+      if (scrollAttempts >= maxScrollAttempts) {
+        console.log('⚠️  Reached maximum scroll attempts, no liked posts found');
+      }
+
+      return -1; // No liked post found
+    } catch (error) {
+      console.error('Error finding last liked post:', error);
+      return -1;
     }
   }
 
@@ -224,34 +351,6 @@ export class LinkedInBot {
       }
     } catch (error) {
       console.log('Could not sort by recent (this is optional):', error);
-    }
-  }
-
-  private async resharePost(postElement: any): Promise<void> {
-    try {
-      // Find the repost button
-      const repostButton = await postElement.$('button[aria-label*="Repost"]');
-
-      if (!repostButton) {
-        console.log('Repost button not found');
-        return;
-      }
-
-      await repostButton.click();
-      await this.page?.waitForTimeout(1500);
-
-      // Click on "Repost" option in the dropdown menu
-      const repostOption = await this.page?.$('button[aria-label*="Repost"], div[role="button"]:has-text("Repost")');
-
-      if (repostOption) {
-        await repostOption.click();
-        console.log('✓ Reshared post');
-        await this.page?.waitForTimeout(1000);
-      } else {
-        console.log('Repost option not found in menu');
-      }
-    } catch (error) {
-      console.error('Error resharing post:', error);
     }
   }
 

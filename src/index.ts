@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { LinkedInBot } from './linkedin';
+import CSVLogger from './csvLogger';
 
 dotenv.config();
 
@@ -32,37 +33,61 @@ async function main() {
   const intervalMinutes = parseInt(process.env.CHECK_INTERVAL_MINUTES || '60');
   const headless = process.env.HEADLESS === 'true';
 
-  console.log('=== LinkedIn Post Liker & Resharer ===');
+  // Initialize CSV logger
+  const csvLogger = new CSVLogger(process.env.CSV_LOG_PATH);
+  console.log(`CSV log file: ${csvLogger.getLogPath()}`);
+
+  console.log('=== LinkedIn Post Liker ===');
   console.log(`Monitoring ${pages.length} pages`);
   console.log(`Check interval: ${intervalMinutes} minutes`);
   console.log(`Headless mode: ${headless}\n`);
 
   // Run the bot
-  await runBot(email, password, pages, headless);
+  await runBot(email, password, pages, headless, csvLogger);
 
   // Schedule recurring checks
   setInterval(async () => {
     console.log('\n--- Running scheduled check ---');
-    await runBot(email, password, pages, headless);
+    await runBot(email, password, pages, headless, csvLogger);
   }, intervalMinutes * 60 * 1000);
 }
 
-async function runBot(email: string, password: string, pages: string[], headless: boolean) {
+async function runBot(email: string, password: string, pages: string[], headless: boolean, csvLogger: CSVLogger) {
   const bot = new LinkedInBot(email, password, headless);
 
   try {
     await bot.initialize();
 
-    let totalProcessed = 0;
     for (const pageUrl of pages) {
-      const processed = await bot.checkPageForNewPosts(pageUrl);
-      totalProcessed += processed;
+      const result = await bot.checkPageForNewPosts(pageUrl);
+
+      // Log to CSV
+      csvLogger.logResult({
+        timestamp: '', // Will be set by CSVLogger
+        page: result.page,
+        newPostsFound: result.newPostsFound,
+        successfulLikes: result.successfulLikes,
+        failedPosts: result.failedPosts,
+        status: result.status,
+        errorMessage: result.errorMessage
+      });
     }
 
-    console.log(`\n✓ Check complete. Processed ${totalProcessed} new posts total.`);
+    console.log(`\n✓ All pages checked. Results logged to CSV.`);
     console.log(`Next check in ${process.env.CHECK_INTERVAL_MINUTES || 60} minutes...\n`);
   } catch (error) {
     console.error('Error running bot:', error);
+
+    // Log error to CSV
+    csvLogger.logResult({
+      timestamp: '',
+      page: 'ALL',
+      newPostsFound: 0,
+      successfulLikes: 0,
+      failedPosts: 0,
+      status: 'ERROR',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
   } finally {
     await bot.close();
   }

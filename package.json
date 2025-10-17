@@ -8,10 +8,10 @@
     "dev": "tsx watch src/index.ts",
     "install-browser": "npx playwright install chromium"
   },
-  "keywords": [],
+  "keywords": ["linkedin", "automation", "playwright", "likes"],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Automated LinkedIn post liker - monitors pages and likes new posts",
   "devDependencies": {
     "@types/node": "^24.8.1",
     "tsx": "^4.20.6",
