@@ -6,6 +6,12 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo "Setting up cron job for LinkedIn Bot..."
 
+# Make sure RUN_ONCE is set in .env
+if ! grep -q "^RUN_ONCE=" "$SCRIPT_DIR/.env" 2>/dev/null; then
+    echo "RUN_ONCE=true" >> "$SCRIPT_DIR/.env"
+    echo "Added RUN_ONCE=true to .env"
+fi
+
 # Create a cron job that runs every hour
 (crontab -l 2>/dev/null; echo "0 * * * * cd $SCRIPT_DIR && /usr/bin/npm start >> $SCRIPT_DIR/cron.log 2>&1") | crontab -
 

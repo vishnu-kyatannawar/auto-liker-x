@@ -29,9 +29,10 @@ async function main() {
     process.exit(1);
   }
 
-  // Get check interval and headless mode
+  // Get configuration
   const intervalMinutes = parseInt(process.env.CHECK_INTERVAL_MINUTES || '60');
   const headless = process.env.HEADLESS === 'true';
+  const runOnce = process.env.RUN_ONCE === 'true';
 
   // Initialize CSV logger
   const csvLogger = new CSVLogger(process.env.CSV_LOG_PATH);
@@ -39,13 +40,20 @@ async function main() {
 
   console.log('=== LinkedIn Post Liker ===');
   console.log(`Monitoring ${pages.length} pages`);
-  console.log(`Check interval: ${intervalMinutes} minutes`);
-  console.log(`Headless mode: ${headless}\n`);
+  console.log(`Headless mode: ${headless}`);
+  console.log(`Run mode: ${runOnce ? 'Single run (exit after completion)' : `Continuous (every ${intervalMinutes} minutes)`}\n`);
 
   // Run the bot
   await runBot(email, password, pages, headless, csvLogger);
 
-  // Schedule recurring checks
+  // If RUN_ONCE is true, exit after first run
+  if (runOnce) {
+    console.log('✓ Single run completed. Exiting...');
+    process.exit(0);
+  }
+
+  // Otherwise, schedule recurring checks
+  console.log(`Next check in ${intervalMinutes} minutes...`);
   setInterval(async () => {
     console.log('\n--- Running scheduled check ---');
     await runBot(email, password, pages, headless, csvLogger);

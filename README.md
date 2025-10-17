@@ -49,9 +49,10 @@ CSV_LOG_PATH=./logs/linkedin-bot-results.csv
 **Environment Variables:**
 - `LINKEDIN_EMAIL` - Your LinkedIn email
 - `LINKEDIN_PASSWORD` - Your LinkedIn password
-- `CHECK_INTERVAL_MINUTES` - How often to check for new posts (default: 60)
+- `CHECK_INTERVAL_MINUTES` - How often to check for new posts when running continuously (default: 60)
 - `LINKEDIN_PAGES` - Comma-separated list of LinkedIn pages to monitor
 - `HEADLESS` - Set to `true` to run browser in background, `false` to see browser window
+- `RUN_ONCE` - Set to `true` to run once and exit (for cron/scheduled runs), `false` for continuous mode (default: false)
 - `CSV_LOG_PATH` - Path to CSV log file for tracking results (default: ./linkedin-bot-results.csv)
 
 ## Usage
@@ -92,18 +93,21 @@ Runs with auto-restart on file changes.
 
 ## Scheduling (Run Automatically)
 
-To run the bot automatically daily, even after reboots:
+To run the bot automatically every hour, even after reboots:
 
 **Quick Setup:**
 ```bash
-# For systemd (recommended for Linux)
-./setup-systemd.sh
-
-# OR for cron (simpler alternative)
+# For cron (recommended - runs once per execution, cron handles scheduling)
 ./setup-cron.sh
+
+# OR for systemd (advanced)
+./setup-systemd.sh
 ```
 
-**Important:** Set `HEADLESS=true` in `.env` for scheduled/automatic runs.
+**Important:**
+- The cron setup automatically sets `RUN_ONCE=true` in `.env` so the script runs once and exits (cron handles the hourly scheduling)
+- Set `HEADLESS=true` in `.env` for scheduled/automatic runs
+- For manual/continuous mode, set `RUN_ONCE=false` (script will run continuously with internal interval)
 
 For detailed scheduling options, see [SCHEDULING.md](SCHEDULING.md)
 
