@@ -28,25 +28,27 @@ async function main() {
     process.exit(1);
   }
 
-  // Get check interval
+  // Get check interval and headless mode
   const intervalMinutes = parseInt(process.env.CHECK_INTERVAL_MINUTES || '60');
+  const headless = process.env.HEADLESS === 'true';
 
   console.log('=== LinkedIn Post Liker & Resharer ===');
   console.log(`Monitoring ${pages.length} pages`);
-  console.log(`Check interval: ${intervalMinutes} minutes\n`);
+  console.log(`Check interval: ${intervalMinutes} minutes`);
+  console.log(`Headless mode: ${headless}\n`);
 
   // Run the bot
-  await runBot(email, password, pages);
+  await runBot(email, password, pages, headless);
 
   // Schedule recurring checks
   setInterval(async () => {
     console.log('\n--- Running scheduled check ---');
-    await runBot(email, password, pages);
+    await runBot(email, password, pages, headless);
   }, intervalMinutes * 60 * 1000);
 }
 
-async function runBot(email: string, password: string, pages: string[]) {
-  const bot = new LinkedInBot(email, password);
+async function runBot(email: string, password: string, pages: string[], headless: boolean) {
+  const bot = new LinkedInBot(email, password, headless);
 
   try {
     await bot.initialize();

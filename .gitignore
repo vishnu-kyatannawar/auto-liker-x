@@ -7,3 +7,4 @@ processed-posts.json
 playwright-report/
 test-results/
 playwright/.cache/
+.browser-data/
