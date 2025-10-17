@@ -1,6 +1,5 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import path from 'path';
-import storage from './storage';
 
 export interface PageResult {
   page: string;
@@ -139,48 +138,75 @@ export class LinkedInBot {
       // Sort posts by Recent
       await this.sortByRecent();
 
-      // Scroll down to find the last liked post
-      const lastLikedPostIndex = await this.findLastLikedPost();
+      // Scroll down to find the last liked post and get the URN
+      const lastLikedPostUrn = await this.findLastLikedPostUrn();
 
-      if (lastLikedPostIndex === -1) {
+      if (!lastLikedPostUrn) {
         console.log('No liked posts found, will process all posts');
       } else {
-        console.log(`Found last liked post at index ${lastLikedPostIndex}`);
+        console.log(`Found last liked post with URN: ${lastLikedPostUrn}`);
       }
+
+      // Scroll back to top to get all posts fresh
+      await this.page.evaluate(() => window.scrollTo(0, 0));
+      await this.page.waitForTimeout(2000);
+
+      // Scroll down a bit to load more posts
+      await this.page.evaluate(() => window.scrollBy(0, 1500));
+      await this.page.waitForTimeout(2000);
+      await this.page.evaluate(() => window.scrollBy(0, 1500));
+      await this.page.waitForTimeout(2000);
 
       // Get all posts
       const allPosts = await this.page.$$('div[data-urn*="activity"]');
       console.log(`Found ${allPosts.length} total posts on the page`);
 
-      // Process only posts after the last liked one (newer posts)
-      const postsToProcess = lastLikedPostIndex === -1
+      // Find the index of the last liked post in current DOM
+      let lastLikedIndex = -1;
+      if (lastLikedPostUrn) {
+        for (let i = 0; i < allPosts.length; i++) {
+          const urn = await allPosts[i].getAttribute('data-urn');
+          if (urn === lastLikedPostUrn) {
+            lastLikedIndex = i;
+            console.log(`Last liked post is at index ${i} in current view`);
+            break;
+          }
+        }
+      }
+
+      // Process only posts before the last liked one (newer posts)
+      // Don't reverse - we want to process from top (newest) to the liked post (oldest new)
+      const postsToProcess = lastLikedIndex === -1
         ? allPosts
-        : allPosts.slice(0, lastLikedPostIndex).reverse(); // Reverse to go from oldest to newest
+        : allPosts.slice(0, lastLikedIndex);
 
       result.newPostsFound = postsToProcess.length;
-      console.log(`Will process ${postsToProcess.length} new posts (from oldest to newest)`);
+      console.log(`Will process ${postsToProcess.length} new posts`);
+
+      // Debug: print URNs of posts we'll process
+      for (let i = 0; i < Math.min(3, postsToProcess.length); i++) {
+        const debugUrn = await postsToProcess[i].getAttribute('data-urn');
+        console.log(`  Post ${i}: ${debugUrn}`);
+      }
 
       for (const post of postsToProcess) {
         try {
           // Extract post URN (unique identifier)
           const urnAttribute = await post.getAttribute('data-urn');
-          if (!urnAttribute) continue;
-
-          const postId = urnAttribute;
-
-          // Skip if already processed
-          if (storage.isProcessed(postId)) {
-            console.log(`Skipping already processed post: ${postId}`);
+          if (!urnAttribute) {
+            console.log('Skipping post with no URN');
             continue;
           }
 
-          console.log(`Processing new post: ${postId}`);
+          const postId = urnAttribute;
+
+          console.log(`Processing post: ${postId}`);
 
           // Scroll the post into view
           await post.scrollIntoViewIfNeeded();
           await this.page.waitForTimeout(500);
 
-          // Like the post
+          // Like the post (it will check if already liked and skip if needed)
           const liked = await this.likePost(post);
 
           if (liked) {
@@ -188,9 +214,6 @@ export class LinkedInBot {
           } else {
             result.failedPosts++;
           }
-
-          // Mark as processed
-          storage.markAsProcessed(postId);
 
           // Add delay between actions to avoid rate limiting
           await this.page.waitForTimeout(2000);
@@ -252,8 +275,8 @@ export class LinkedInBot {
     }
   }
 
-  private async findLastLikedPost(): Promise<number> {
-    if (!this.page) return -1;
+  private async findLastLikedPostUrn(): Promise<string | null> {
+    if (!this.page) return null;
 
     try {
       console.log('Scrolling to find last liked post...');
@@ -282,11 +305,15 @@ export class LinkedInBot {
             if (likeButton) {
               const ariaPressed = await likeButton.getAttribute('aria-pressed');
               if (ariaPressed === 'true') {
-                console.log(`✓ Found liked post at index ${i} (total ${currentPostCount} posts loaded)`);
-                // Scroll this post into view
-                await post.scrollIntoViewIfNeeded();
-                await this.page.waitForTimeout(1000);
-                return i;
+                // Get the URN of this liked post
+                const urn = await post.getAttribute('data-urn');
+                if (urn) {
+                  console.log(`✓ Found liked post at index ${i} (URN: ${urn})`);
+                  // Scroll this post into view
+                  await post.scrollIntoViewIfNeeded();
+                  await this.page.waitForTimeout(1000);
+                  return urn;
+                }
               }
             }
           } catch (e) {
@@ -314,10 +341,10 @@ export class LinkedInBot {
         console.log('⚠️  Reached maximum scroll attempts, no liked posts found');
       }
 
-      return -1; // No liked post found
+      return null; // No liked post found
     } catch (error) {
       console.error('Error finding last liked post:', error);
-      return -1;
+      return null;
     }
   }
 

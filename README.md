@@ -7,12 +7,12 @@ Automated tool to monitor LinkedIn pages and automatically like new posts.
 - Monitors multiple LinkedIn company/personal pages
 - Automatically likes new posts
 - Finds last liked post and processes only newer posts
-- Processes posts from oldest to newest
-- Tracks processed posts to avoid duplicates
+- Uses LinkedIn's like status to avoid duplicates (no local storage)
 - Runs on a configurable schedule
 - Headless browser automation using Playwright
 - Persistent browser session - login once, no repeated verification
 - Detailed summary report after each run
+- CSV logging with IST timestamps
 
 ## Setup
 
@@ -98,12 +98,14 @@ Runs with auto-restart on file changes.
 4. Visits each configured LinkedIn page
 5. Sorts posts by "Recent"
 6. Scrolls down to find the last post you already liked
-7. Processes all posts above that (newer posts) from oldest to newest:
-   - Clicks the "Like" button
-   - Saves the post ID to avoid processing again
+7. Processes all posts above that (newer posts):
+   - Checks if post is already liked (via LinkedIn's UI)
+   - Clicks the "Like" button if not already liked
+   - Skips if already liked
 8. Shows detailed summary (total posts, successful likes, failures)
-9. Waits for the configured interval
-10. Repeats (using saved session, no re-login needed)
+9. Logs results to CSV with IST timestamp
+10. Waits for the configured interval
+11. Repeats (using saved session, no re-login needed)
 
 ## CSV Logging
 
@@ -122,7 +124,7 @@ The CSV file is created automatically at the path specified in `CSV_LOG_PATH` en
 
 - **Session Persistence**: Your login session is saved in `.browser-data/` folder. After first successful login, you won't need to login again
 - **Browser Mode**: Set `HEADLESS=false` in `.env` to see the browser, or `HEADLESS=true` to run in background
-- **Post Tracking**: Posts are tracked in `processed-posts.json` to avoid duplicate actions
+- **Smart Tracking**: Uses LinkedIn's own like status to track which posts have been liked - no local storage needed
 - **Rate Limiting**: The tool includes delays between actions to avoid LinkedIn rate limits
 - **First Run**: LinkedIn may require verification on first login - complete it manually in the browser window
 - **CSV Logs**: All results are logged to CSV with IST timestamps for easy tracking and analysis
@@ -139,7 +141,7 @@ The CSV file is created automatically at the path specified in `CSV_LOG_PATH` en
 
 **Posts not found**: LinkedIn's DOM structure may have changed; selectors may need updating
 
-**Reset everything**: Delete both `.browser-data/` and `processed-posts.json` to start fresh
+**Reset session**: Delete the `.browser-data/` folder to start with a fresh login
 
 ## Safety
 
