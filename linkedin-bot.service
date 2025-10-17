@@ -1,0 +1,17 @@
+[Unit]
+Description=LinkedIn Post Liker Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/vishnu/projects/research/playwright/linkedin-posts-liker
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=10
+User=vishnu
+Environment="DISPLAY=:0"
+Environment="XAUTHORITY=/home/vishnu/.Xauthority"
+
+[Install]
+WantedBy=multi-user.target

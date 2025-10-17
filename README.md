@@ -90,6 +90,23 @@ npm run dev
 
 Runs with auto-restart on file changes.
 
+## Scheduling (Run Automatically)
+
+To run the bot automatically daily, even after reboots:
+
+**Quick Setup:**
+```bash
+# For systemd (recommended for Linux)
+./setup-systemd.sh
+
+# OR for cron (simpler alternative)
+./setup-cron.sh
+```
+
+**Important:** Set `HEADLESS=true` in `.env` for scheduled/automatic runs.
+
+For detailed scheduling options, see [SCHEDULING.md](SCHEDULING.md)
+
 ## How It Works
 
 1. Launches browser with persistent session (saved in `.browser-data/`)
