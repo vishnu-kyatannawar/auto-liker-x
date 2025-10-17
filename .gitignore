@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+processed-posts.json
+*.log
+.DS_Store
+playwright-report/
+test-results/
+playwright/.cache/
