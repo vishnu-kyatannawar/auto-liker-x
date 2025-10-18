@@ -21,21 +21,19 @@ if ! grep -q "^RUN_ONCE=" "$SCRIPT_DIR/.env" 2>/dev/null; then
     echo "Added RUN_ONCE=true to .env"
 fi
 
-# Get the PATH that includes npm (including nvm paths)
-SHELL_PATH="$PATH"
+# Use the wrapper script that handles environment setup
+WRAPPER_SCRIPT="$SCRIPT_DIR/run-bot.sh"
 
-# Check if using nvm and get nvm directory
-NVM_DIR="$HOME/.nvm"
-if [ -s "$NVM_DIR/nvm.sh" ]; then
-    echo "Detected nvm installation"
-    # Create cron jobs that source nvm before running
-    (crontab -l 2>/dev/null; echo "0 * * * * . $NVM_DIR/nvm.sh && cd $SCRIPT_DIR && npm start >> $SCRIPT_DIR/cron.log 2>&1") | crontab -
-    (crontab -l 2>/dev/null; echo "@reboot sleep 300 && . $NVM_DIR/nvm.sh && cd $SCRIPT_DIR && npm start >> $SCRIPT_DIR/cron.log 2>&1") | crontab -
-else
-    # Not using nvm, use regular PATH
-    (crontab -l 2>/dev/null; echo "0 * * * * export PATH=\"$SHELL_PATH\" && cd $SCRIPT_DIR && npm start >> $SCRIPT_DIR/cron.log 2>&1") | crontab -
-    (crontab -l 2>/dev/null; echo "@reboot sleep 300 && export PATH=\"$SHELL_PATH\" && cd $SCRIPT_DIR && npm start >> $SCRIPT_DIR/cron.log 2>&1") | crontab -
-fi
+# Make sure wrapper script is executable
+chmod +x "$WRAPPER_SCRIPT"
+
+echo "Creating cron jobs using wrapper script: $WRAPPER_SCRIPT"
+
+# Create cron job that runs every hour
+(crontab -l 2>/dev/null; echo "0 * * * * $WRAPPER_SCRIPT >> $SCRIPT_DIR/cron.log 2>&1") | crontab -
+
+# Also add @reboot to run on startup (5 min after boot)
+(crontab -l 2>/dev/null; echo "@reboot sleep 300 && $WRAPPER_SCRIPT >> $SCRIPT_DIR/cron.log 2>&1") | crontab -
 
 echo "✓ Cron job installed"
 echo ""
