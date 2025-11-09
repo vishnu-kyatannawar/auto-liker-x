@@ -1,0 +1,13 @@
+[Unit]
+Description=Run Instagram Bot Daily
+Requires=instagram-bot.service
+
+[Timer]
+OnBootSec=5min
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+
+
