@@ -169,35 +169,49 @@ Run the bots manually using the wrapper script:
 
 ### Automated Scheduling (Cron)
 
-Schedule the bots to run automatically using cron:
+Schedule the bots to run automatically using cron. Choose one of the three options:
 
-#### Setup LinkedIn Bot
+#### Option 1: Setup Both Bots (Recommended)
 ```bash
-./setup-cron.sh
+./setup-both-cron.sh
 ```
+Runs both LinkedIn and Instagram bots sequentially every hour.
+Logs to: `both-bots-cron.log`
 
-#### Setup Instagram Bot
+#### Option 2: Setup LinkedIn Bot Only
+```bash
+./setup-linkedin-cron.sh
+```
+Runs only the LinkedIn bot every hour.
+Logs to: `linkedin-cron.log`
+
+#### Option 3: Setup Instagram Bot Only
 ```bash
 ./setup-instagram-cron.sh
 ```
+Runs only the Instagram bot every hour.
+Logs to: `instagram-cron.log`
 
-Both scripts will:
+All scripts will:
 - Run hourly (at the top of each hour)
 - Run 5 minutes after system reboot
-- Log to `cron.log` (LinkedIn) and `instagram-cron.log` (Instagram)
+- Create separate log files for easy tracking
 
-#### View Cron Jobs
+#### Manage Cron Jobs
+
+**View scheduled jobs:**
 ```bash
 crontab -l
 ```
 
-#### View Logs
+**View logs:**
 ```bash
-tail -f cron.log
-tail -f instagram-cron.log
+tail -f both-bots-cron.log       # Both bots
+tail -f linkedin-cron.log         # LinkedIn only
+tail -f instagram-cron.log        # Instagram only
 ```
 
-#### Remove Cron Jobs
+**Remove cron jobs:**
 ```bash
 crontab -e
 # Delete the bot-related lines

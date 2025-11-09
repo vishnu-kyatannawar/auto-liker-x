@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Script to set up cron job for LinkedIn bot
+# Script to set up cron job for LinkedIn bot only
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-echo "Setting up cron job for LinkedIn Bot..."
+echo "Setting up cron job for LinkedIn Bot only..."
 
 # Find npm location
 NPM_PATH=$(which npm)
@@ -27,20 +27,21 @@ WRAPPER_SCRIPT="$SCRIPT_DIR/run-bot.sh"
 # Make sure wrapper script is executable
 chmod +x "$WRAPPER_SCRIPT"
 
-echo "Creating cron jobs using wrapper script: $WRAPPER_SCRIPT"
+echo "Creating cron jobs using wrapper script: $WRAPPER_SCRIPT linkedin"
 
-# Create cron job that runs every hour
-(crontab -l 2>/dev/null; echo "0 * * * * $WRAPPER_SCRIPT >> $SCRIPT_DIR/cron.log 2>&1") | crontab -
+# Create cron job that runs every hour for LinkedIn
+(crontab -l 2>/dev/null; echo "0 * * * * $WRAPPER_SCRIPT linkedin >> $SCRIPT_DIR/linkedin-cron.log 2>&1") | crontab -
 
 # Also add @reboot to run on startup (5 min after boot)
-(crontab -l 2>/dev/null; echo "@reboot sleep 300 && $WRAPPER_SCRIPT >> $SCRIPT_DIR/cron.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "@reboot sleep 300 && $WRAPPER_SCRIPT linkedin >> $SCRIPT_DIR/linkedin-cron.log 2>&1") | crontab -
 
-echo "✓ Cron job installed"
+echo "✓ LinkedIn cron job installed"
 echo ""
-echo "The bot will run:"
+echo "The LinkedIn bot will run:"
 echo "  - Every hour (at the top of each hour)"
 echo "  - 5 minutes after system reboot"
 echo ""
 echo "View cron jobs:  crontab -l"
-echo "View logs:       tail -f $SCRIPT_DIR/cron.log"
+echo "View logs:       tail -f $SCRIPT_DIR/linkedin-cron.log"
 echo "Remove cron:     crontab -e (then delete the lines)"
+
