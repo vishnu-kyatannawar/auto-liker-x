@@ -152,33 +152,50 @@ Runs with auto-restart on file changes.
 
 ## Scheduling (Run Automatically)
 
-You can schedule both LinkedIn and Instagram bots to run automatically.
+You can schedule both LinkedIn and Instagram bots to run automatically using either systemd or cron.
 
 ### LinkedIn Bot Scheduling
 
-To run the LinkedIn bot automatically:
-
-**Quick Setup:**
+**Option 1: Systemd (recommended)**
 ```bash
-# For systemd (recommended)
 ./setup-systemd.sh
+```
+
+**Option 2: Cron**
+```bash
+./setup-cron.sh
 ```
 
 ### Instagram Bot Scheduling
 
-To run the Instagram bot automatically:
-
-**Quick Setup:**
+**Option 1: Systemd (recommended)**
 ```bash
-# For systemd (recommended)
 ./setup-instagram-systemd.sh
 ```
 
+**Option 2: Cron**
+```bash
+./setup-instagram-cron.sh
+```
+
+### Manual Execution
+
+You can also run the bots manually using the wrapper script:
+
+```bash
+# Run LinkedIn bot
+./run-bot.sh
+
+# Run Instagram bot
+./run-bot.sh instagram
+```
+
 **Important:**
-- Set `RUN_ONCE=true` in `.env` so the script runs once and exits (systemd handles scheduling)
+- Set `RUN_ONCE=true` in `.env` so the script runs once and exits (scheduler handles timing)
 - Set `HEADLESS=true` in `.env` for scheduled/automatic runs
 - For manual/continuous mode, set `RUN_ONCE=false` (script will run continuously with internal interval)
 - Both bots can run independently on their own schedules
+- Cron logs: `cron.log` (LinkedIn) and `instagram-cron.log` (Instagram)
 
 For detailed scheduling options, see [SCHEDULING.md](SCHEDULING.md)
 
