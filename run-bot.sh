@@ -1,20 +1,53 @@
 #!/bin/bash
 
 # Wrapper script to run LinkedIn or Instagram bot with proper environment
-# Usage: ./run-bot.sh [linkedin|instagram]
-# Default: linkedin
+# Usage: ./run-bot.sh [linkedin|instagram|both]
+# Default: both (runs both bots sequentially)
 
 # Get the script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Parse argument (default to linkedin)
-BOT_TYPE="${1:-linkedin}"
+# Parse argument (default to both)
+BOT_TYPE="${1:-both}"
 
 # Validate bot type
-if [ "$BOT_TYPE" != "linkedin" ] && [ "$BOT_TYPE" != "instagram" ]; then
+if [ "$BOT_TYPE" != "linkedin" ] && [ "$BOT_TYPE" != "instagram" ] && [ "$BOT_TYPE" != "both" ]; then
     echo "ERROR: Invalid bot type '$BOT_TYPE'"
-    echo "Usage: $0 [linkedin|instagram]"
+    echo "Usage: $0 [linkedin|instagram|both]"
     exit 1
+fi
+
+# If both, run them sequentially
+if [ "$BOT_TYPE" == "both" ]; then
+    echo "=========================================="
+    echo "Running Both Bots - Starting at $(date)"
+    echo "=========================================="
+    echo ""
+    
+    # Run LinkedIn bot
+    "$0" linkedin
+    LINKEDIN_EXIT=$?
+    
+    echo ""
+    echo "=========================================="
+    echo ""
+    
+    # Run Instagram bot
+    "$0" instagram
+    INSTAGRAM_EXIT=$?
+    
+    echo ""
+    echo "=========================================="
+    echo "Both Bots Completed at $(date)"
+    echo "LinkedIn exit code: $LINKEDIN_EXIT"
+    echo "Instagram exit code: $INSTAGRAM_EXIT"
+    echo "=========================================="
+    
+    # Exit with error if either failed
+    if [ $LINKEDIN_EXIT -ne 0 ] || [ $INSTAGRAM_EXIT -ne 0 ]; then
+        exit 1
+    fi
+    exit 0
 fi
 
 # Set bot-specific variables

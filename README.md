@@ -183,10 +183,13 @@ You can schedule both LinkedIn and Instagram bots to run automatically using eit
 You can also run the bots manually using the wrapper script:
 
 ```bash
-# Run LinkedIn bot
+# Run both bots sequentially (default)
 ./run-bot.sh
 
-# Run Instagram bot
+# Run only LinkedIn bot
+./run-bot.sh linkedin
+
+# Run only Instagram bot
 ./run-bot.sh instagram
 ```
 
