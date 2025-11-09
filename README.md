@@ -150,37 +150,11 @@ npm run dev:instagram
 
 Runs with auto-restart on file changes.
 
-## Scheduling (Run Automatically)
-
-You can schedule both LinkedIn and Instagram bots to run automatically using either systemd or cron.
-
-### LinkedIn Bot Scheduling
-
-**Option 1: Systemd (recommended)**
-```bash
-./setup-systemd.sh
-```
-
-**Option 2: Cron**
-```bash
-./setup-cron.sh
-```
-
-### Instagram Bot Scheduling
-
-**Option 1: Systemd (recommended)**
-```bash
-./setup-instagram-systemd.sh
-```
-
-**Option 2: Cron**
-```bash
-./setup-instagram-cron.sh
-```
+## Usage
 
 ### Manual Execution
 
-You can also run the bots manually using the wrapper script:
+Run the bots manually using the wrapper script:
 
 ```bash
 # Run both bots sequentially (default)
@@ -193,14 +167,46 @@ You can also run the bots manually using the wrapper script:
 ./run-bot.sh instagram
 ```
 
-**Important:**
-- Set `RUN_ONCE=true` in `.env` so the script runs once and exits (scheduler handles timing)
-- Set `HEADLESS=true` in `.env` for scheduled/automatic runs
-- For manual/continuous mode, set `RUN_ONCE=false` (script will run continuously with internal interval)
-- Both bots can run independently on their own schedules
-- Cron logs: `cron.log` (LinkedIn) and `instagram-cron.log` (Instagram)
+### Automated Scheduling (Cron)
 
-For detailed scheduling options, see [SCHEDULING.md](SCHEDULING.md)
+Schedule the bots to run automatically using cron:
+
+#### Setup LinkedIn Bot
+```bash
+./setup-cron.sh
+```
+
+#### Setup Instagram Bot
+```bash
+./setup-instagram-cron.sh
+```
+
+Both scripts will:
+- Run hourly (at the top of each hour)
+- Run 5 minutes after system reboot
+- Log to `cron.log` (LinkedIn) and `instagram-cron.log` (Instagram)
+
+#### View Cron Jobs
+```bash
+crontab -l
+```
+
+#### View Logs
+```bash
+tail -f cron.log
+tail -f instagram-cron.log
+```
+
+#### Remove Cron Jobs
+```bash
+crontab -e
+# Delete the bot-related lines
+```
+
+**Important Configuration:**
+- Set `RUN_ONCE=true` in `.env` so scripts run once and exit (cron handles scheduling)
+- Set `HEADLESS=true` in `.env` for automated/scheduled runs
+- For manual continuous mode, set `RUN_ONCE=false` (script runs continuously with internal interval)
 
 ## How It Works
 
