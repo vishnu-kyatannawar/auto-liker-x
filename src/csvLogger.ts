@@ -3,6 +3,7 @@ import path from 'path';
 
 export interface RunResult {
   timestamp: string;
+  platform: 'LinkedIn' | 'Instagram';
   page: string;
   newPostsFound: number;
   successfulLikes: number;
@@ -15,7 +16,7 @@ class CSVLogger {
   private csvPath: string;
 
   constructor(csvPath?: string) {
-    this.csvPath = csvPath || path.join(process.cwd(), 'linkedin-bot-results.csv');
+    this.csvPath = csvPath || path.join(process.cwd(), 'bot-results.csv');
     this.ensureCSVExists();
   }
 
@@ -30,7 +31,7 @@ class CSVLogger {
 
       // Create CSV with headers if it doesn't exist
       if (!fs.existsSync(this.csvPath)) {
-        const headers = 'Timestamp (IST),Page,New Posts Found,Successfully Liked,Failed/Skipped,Status,Error Message\n';
+        const headers = 'Timestamp (IST),Platform,Page,New Posts Found,Successfully Liked,Failed/Skipped,Status,Error Message\n';
         fs.writeFileSync(this.csvPath, headers);
         console.log(`Created CSV log file: ${this.csvPath}`);
       }
@@ -64,6 +65,7 @@ class CSVLogger {
 
       const row = [
         timestamp,
+        result.platform,
         this.escapeCSV(result.page),
         result.newPostsFound,
         result.successfulLikes,

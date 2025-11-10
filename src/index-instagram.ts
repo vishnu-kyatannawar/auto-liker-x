@@ -34,8 +34,8 @@ async function main() {
   const headless = process.env.HEADLESS === 'true';
   const runOnce = process.env.RUN_ONCE === 'true';
 
-  // Initialize CSV logger
-  const csvLogger = new CSVLogger(process.env.INSTAGRAM_CSV_LOG_PATH || './instagram-bot-results.csv');
+  // Initialize CSV logger (use same CSV_LOG_PATH as LinkedIn)
+  const csvLogger = new CSVLogger(process.env.CSV_LOG_PATH);
   console.log(`CSV log file: ${csvLogger.getLogPath()}`);
 
   console.log('=== Instagram Post Liker ===');
@@ -72,6 +72,7 @@ async function runBot(username: string, password: string, accounts: string[], he
       // Log to CSV
       csvLogger.logResult({
         timestamp: '', // Will be set by CSVLogger
+        platform: 'Instagram',
         page: result.page,
         newPostsFound: result.newPostsFound,
         successfulLikes: result.successfulLikes,
@@ -89,6 +90,7 @@ async function runBot(username: string, password: string, accounts: string[], he
     // Log error to CSV
     csvLogger.logResult({
       timestamp: '',
+      platform: 'Instagram',
       page: 'ALL',
       newPostsFound: 0,
       successfulLikes: 0,

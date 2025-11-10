@@ -43,18 +43,17 @@ Edit `.env`:
 LINKEDIN_EMAIL=your-email@example.com
 LINKEDIN_PASSWORD=your-password
 LINKEDIN_PAGES=https://www.linkedin.com/company/your-company/,https://www.linkedin.com/in/some-person/
-CSV_LOG_PATH=./logs/linkedin-bot-results.csv
 
 # Instagram Configuration
 INSTAGRAM_USERNAME=your-username
 INSTAGRAM_PASSWORD=your-password
 INSTAGRAM_ACCOUNTS=https://www.instagram.com/account1/,https://www.instagram.com/account2/
-INSTAGRAM_CSV_LOG_PATH=./instagram-bot-results.csv
 
 # General Configuration
 CHECK_INTERVAL_MINUTES=60
 HEADLESS=false
 RUN_ONCE=false
+CSV_LOG_PATH=./bot-results.csv
 ```
 
 **Environment Variables:**
@@ -63,15 +62,14 @@ RUN_ONCE=false
 - `LINKEDIN_EMAIL` - Your LinkedIn email
 - `LINKEDIN_PASSWORD` - Your LinkedIn password
 - `LINKEDIN_PAGES` - Comma-separated list of LinkedIn pages to monitor
-- `CSV_LOG_PATH` - Path to CSV log file for LinkedIn results (default: ./linkedin-bot-results.csv)
 
 **Instagram:**
 - `INSTAGRAM_USERNAME` - Your Instagram username
 - `INSTAGRAM_PASSWORD` - Your Instagram password
 - `INSTAGRAM_ACCOUNTS` - Comma-separated list of Instagram account URLs to monitor
-- `INSTAGRAM_CSV_LOG_PATH` - Path to CSV log file for Instagram results (default: ./instagram-bot-results.csv)
 
 **General:**
+- `CSV_LOG_PATH` - Path to CSV log file for both LinkedIn and Instagram results (default: ./bot-results.csv)
 - `CHECK_INTERVAL_MINUTES` - How often to check for new posts when running continuously (default: 60)
 - `HEADLESS` - Set to `true` to run browser in background, `false` to see browser window
 - `RUN_ONCE` - Set to `true` to run once and exit (for cron/scheduled runs), `false` for continuous mode (default: false)
@@ -260,16 +258,17 @@ crontab -e
 
 ## CSV Logging
 
-All run results are automatically logged to a CSV file with the following information:
+All run results from both LinkedIn and Instagram bots are automatically logged to a single CSV file with the following information:
 - **Timestamp (IST)** - When the check was performed (Indian Standard Time)
-- **Page** - LinkedIn page URL that was checked
+- **Platform** - LinkedIn or Instagram
+- **Page** - Page/account URL that was checked
 - **New Posts Found** - Number of new posts detected
 - **Successfully Liked** - Number of posts successfully liked
 - **Failed/Skipped** - Number of posts that failed or were skipped
 - **Status** - SUCCESS, PARTIAL, ERROR, or TIMEOUT
 - **Error Message** - Details if any error occurred
 
-The CSV file is created automatically at the path specified in `CSV_LOG_PATH` environment variable. If the directory doesn't exist, it will be created.
+The CSV file is created automatically at the path specified in `CSV_LOG_PATH` environment variable (default: `./bot-results.csv`). If the directory doesn't exist, it will be created. Both platforms log to the same file, making it easy to track all activity in one place.
 
 ## Notes
 
@@ -281,7 +280,7 @@ The CSV file is created automatically at the path specified in `CSV_LOG_PATH` en
 - **Smart Tracking**: Uses each platform's own like status to track which posts have been liked - no local storage needed
 - **Rate Limiting**: The tool includes delays between actions to avoid rate limits
 - **First Run**: Both platforms may require verification on first login - complete it manually in the browser window
-- **CSV Logs**: All results are logged to separate CSV files with IST timestamps for easy tracking and analysis
+- **CSV Logs**: All results from both platforms are logged to a single CSV file with IST timestamps for easy tracking and analysis
 - **Independent Operation**: LinkedIn and Instagram bots run independently and can be scheduled separately
 
 ## Troubleshooting

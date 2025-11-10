@@ -72,6 +72,7 @@ async function runBot(email: string, password: string, pages: string[], headless
       // Log to CSV
       csvLogger.logResult({
         timestamp: '', // Will be set by CSVLogger
+        platform: 'LinkedIn',
         page: result.page,
         newPostsFound: result.newPostsFound,
         successfulLikes: result.successfulLikes,
@@ -89,6 +90,7 @@ async function runBot(email: string, password: string, pages: string[], headless
     // Log error to CSV
     csvLogger.logResult({
       timestamp: '',
+      platform: 'LinkedIn',
       page: 'ALL',
       newPostsFound: 0,
       successfulLikes: 0,
