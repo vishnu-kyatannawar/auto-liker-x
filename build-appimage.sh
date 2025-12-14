@@ -9,7 +9,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 NODE_VERSION="20.18.0"
-APPIMAGETOOL_VERSION="13"
+APPIMAGETOOL_VERSION="continuous"
 BOT_TYPE="${1:-linkedin}"
 
 if [ "$BOT_TYPE" != "linkedin" ] && [ "$BOT_TYPE" != "instagram" ]; then
@@ -87,11 +87,11 @@ cp -r src "$APP_DIR/usr/lib/app/"  # Some files might be needed at runtime
 
 # Install Playwright browsers
 echo -e "${YELLOW}Installing Playwright browsers...${NC}"
-PLAYWRIGHT_BROWSERS_DIR="$TEMP_NODE_MODULES/playwright-browsers"
+PLAYWRIGHT_BROWSERS_DIR="$(pwd)/$TEMP_NODE_MODULES/playwright-browsers"
 mkdir -p "$PLAYWRIGHT_BROWSERS_DIR"
 cd "$TEMP_NODE_MODULES"
 export PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_DIR"
-npx playwright install chromium --with-deps || true
+npx playwright install chromium || true
 cd ..
 
 # Copy Playwright browsers to AppDir
@@ -165,7 +165,6 @@ if [ "$BOT_TYPE" = "linkedin" ]; then
 Name=LinkedIn Bot
 Comment=Automated LinkedIn post liker
 Exec=linkedin-bot.AppImage
-Icon=linkedin-bot
 Type=Application
 Categories=Utility;
 DESKTOP_EOF
@@ -175,7 +174,6 @@ else
 Name=Instagram Bot
 Comment=Automated Instagram post liker
 Exec=instagram-bot.AppImage
-Icon=instagram-bot
 Type=Application
 Categories=Utility;
 DESKTOP_EOF

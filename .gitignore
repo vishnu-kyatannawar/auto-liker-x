@@ -10,3 +10,10 @@ test-results/
 playwright/.cache/
 .browser-data/
 .browser-data-instagram/
+
+# AppImage build artifacts
+build-appimage-*/
+AppDir-*/
+temp-node-modules-*/
+*.AppImage
+test-browsers/
