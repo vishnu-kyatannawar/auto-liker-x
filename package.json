@@ -8,7 +8,10 @@
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "dev:instagram": "tsx watch src/index-instagram.ts",
-    "install-browser": "npx playwright install chromium"
+    "install-browser": "npx playwright install chromium",
+    "build:appimage:linkedin": "bash build-linkedin-appimage.sh",
+    "build:appimage:instagram": "bash build-instagram-appimage.sh",
+    "build:appimage:all": "bash build-linkedin-appimage.sh && bash build-instagram-appimage.sh"
   },
   "keywords": ["linkedin", "instagram", "automation", "playwright", "likes"],
   "author": "",

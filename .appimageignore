@@ -1,0 +1,23 @@
+# Files to ignore when building AppImage
+node_modules/
+.git/
+.gitignore
+*.log
+*.csv
+.browser-data/
+.browser-data-instagram/
+dist/
+build-appimage-*/
+AppDir-*/
+*.AppImage
+.env
+.env.example
+README.md
+RELEASE_NOTES.md
+tsconfig.json
+src/
+*.ts
+!src/**/*.d.ts
+run-bot.sh
+setup-*.sh
+
