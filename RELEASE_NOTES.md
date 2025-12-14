@@ -189,10 +189,165 @@ Built with:
 
 ---
 
-**Version**: 1.0.0  
-**Release Date**: November 9, 2025  
+# Release Notes - v2.0.0
+
+**Release Date:** December 15, 2025
+
+## 🎉 Major Release: AppImage Support
+
+This release introduces **standalone AppImage distribution**, making it easier than ever to deploy and run the bots without any system dependencies. No Node.js installation, no npm dependencies, no Playwright setup - just download and run!
+
+## ✨ New Features
+
+### 🚀 AppImage Distribution (Major Feature)
+- **Self-Contained Executables**: Each bot is now available as a single AppImage file
+  - `linkedin-bot.AppImage` - Standalone LinkedIn bot
+  - `instagram-bot.AppImage` - Standalone Instagram bot
+- **Zero Dependencies**: Includes everything needed to run:
+  - Node.js runtime (~50MB)
+  - All npm dependencies (~50-100MB)
+  - Playwright Chromium browser (~150-200MB)
+  - Application code
+- **Portable**: Run from any directory, reads `.env` from current directory
+- **Easy Deployment**: Just copy the AppImage file and `.env` to any Linux system
+- **Build Scripts**: New npm commands for building AppImages:
+  ```bash
+  npm run build:appimage:linkedin    # Build LinkedIn bot AppImage
+  npm run build:appimage:instagram   # Build Instagram bot AppImage
+  npm run build:appimage:all         # Build both AppImages
+  ```
+
+### 📊 Unified CSV Logging
+- **Single Log File**: Both LinkedIn and Instagram now log to the same CSV file
+- **Platform Column**: Added "Platform" column to distinguish entries
+- **Simplified Configuration**: One `CSV_LOG_PATH` environment variable for both platforms
+- **Default Path**: `./bot-results.csv` (configurable via `CSV_LOG_PATH`)
+- **Backward Compatible**: Existing separate log files still work
+
+## 🔧 Improvements
+
+### Build System
+- **Automated Icon Creation**: Build script automatically creates placeholder icons
+- **Auto Cleanup**: Build process automatically removes all temporary files
+- **Better Error Handling**: Improved build process with proper error checking
+- **Gitignore Updates**: Build artifacts automatically excluded from git
+
+### TypeScript Configuration
+- **DOM Types**: Added DOM library support for browser API usage
+- **Better Type Safety**: Improved compilation with proper type definitions
+
+## 📦 Installation & Usage
+
+### Traditional Installation (Still Supported)
+```bash
+npm install
+npm run install-browser
+# Configure .env and run as before
+```
+
+### AppImage Installation (New!)
+```bash
+# 1. Download or build the AppImage
+npm run build:appimage:linkedin
+
+# 2. Create .env file in your desired directory
+cp .env.example .env
+# Edit .env with your credentials
+
+# 3. Make AppImage executable (if needed)
+chmod +x linkedin-bot.AppImage
+
+# 4. Run it!
+./linkedin-bot.AppImage
+```
+
+## 🎯 Use Cases for AppImage
+
+- **No-Install Deployment**: Run on systems without Node.js
+- **Portable Distribution**: Copy to USB drive, run anywhere
+- **CI/CD Integration**: Easy deployment in automated systems
+- **Multi-System Usage**: Same AppImage works across different Linux distributions
+- **Clean Separation**: Keep bot isolated from system dependencies
+
+## 📝 Technical Details
+
+### AppImage Structure
+- **Size**: ~250-350MB per AppImage (includes all dependencies)
+- **Format**: Standard AppImage format (squashfs-based)
+- **Architecture**: x86_64 Linux
+- **Desktop Integration**: Includes desktop entry files
+- **Environment**: Reads `.env` from current working directory
+
+### Build Process
+- Downloads Node.js LTS runtime
+- Installs production dependencies
+- Compiles TypeScript to JavaScript
+- Bundles Playwright Chromium browser
+- Creates AppDir structure
+- Packages as AppImage using appimagetool
+- Auto-cleans temporary files
+
+## 🔄 Migration Guide
+
+### From v1.0.0 to v2.0.0
+
+**No Breaking Changes!** All existing functionality remains the same.
+
+**CSV Logging Changes:**
+- If you were using separate log files, they'll now be unified
+- Update your scripts if they reference `linkedin-bot-results.csv` or `instagram-bot-results.csv`
+- New default: `bot-results.csv` (both platforms)
+
+**New Optional Feature:**
+- AppImage builds are optional - existing npm-based workflow still works
+- Use AppImages if you want standalone distribution
+- Continue using npm scripts if you prefer traditional installation
+
+## 🐛 Bug Fixes
+
+- Fixed TypeScript compilation errors with DOM APIs
+- Fixed Playwright browser installation in build process
+- Fixed appimagetool download URL
+- Improved build script error handling
+
+## 📊 File Structure Changes
+
+**New Files:**
+- `build-appimage.sh` - Main AppImage build script
+- `build-linkedin-appimage.sh` - LinkedIn-specific build wrapper
+- `build-instagram-appimage.sh` - Instagram-specific build wrapper
+- `.appimageignore` - Files to exclude from AppImage
+
+**Updated Files:**
+- `package.json` - Added AppImage build scripts
+- `tsconfig.json` - Added DOM types
+- `.gitignore` - Excludes build artifacts
+
+## ⚠️ Important Notes
+
+1. **AppImage Size**: Each AppImage is ~250-350MB (includes everything)
+2. **First Run**: Still requires manual 2FA verification on first login
+3. **Browser Data**: Session data created in current directory (`.browser-data/`, `.browser-data-instagram/`)
+4. **CSV Logs**: Now unified in single file by default
+5. **Linux Only**: AppImages are Linux-specific (x86_64)
+
+## 🔒 Security
+
+- AppImages are self-contained and don't modify system files
+- All credentials still read from `.env` file
+- Session data stored locally in current directory
+- No network communication except to LinkedIn/Instagram
+
+## 🙏 Acknowledgments
+
+This release adds significant distribution capabilities while maintaining all existing functionality. The AppImage format makes deployment easier for users who don't want to manage Node.js installations.
+
+---
+
+**Version**: 2.0.0  
+**Release Date**: December 15, 2025  
 **License**: ISC  
-**Platform Support**: Linux, macOS (Windows support not tested)
+**Platform Support**: Linux (AppImage), Linux/macOS (npm installation)
 
 For detailed setup instructions, see [README.md](README.md)
 
