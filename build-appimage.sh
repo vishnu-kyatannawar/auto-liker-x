@@ -209,16 +209,45 @@ CSV_LOG_PATH=./bot-results.csv
 ENV_EOF
 fi
 
+# Create icon if it doesn't exist (required by appimagetool)
+ICON_NAME="${BOT_TYPE}-bot.png"
+if [ ! -f "$APP_DIR/$ICON_NAME" ]; then
+    echo -e "${YELLOW}Creating placeholder icon...${NC}"
+    # Create a minimal 1x1 transparent PNG
+    printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\tpHYs\x00\x00\x0b\x13\x00\x00\x0b\x13\x01\x00\x9a\x9c\x18\x00\x00\x00\nIDATx\x9cc\xf8\x00\x00\x00\x01\x00\x01\x00\x00\x00\x00IEND\xaeB`\x82' > "$APP_DIR/$ICON_NAME"
+fi
+
+# Update desktop file to include icon reference
+if [ "$BOT_TYPE" = "linkedin" ]; then
+    if ! grep -q "^Icon=" "$APP_DIR/app.desktop"; then
+        sed -i '/^Type=Application/a Icon=linkedin-bot' "$APP_DIR/app.desktop"
+    fi
+else
+    if ! grep -q "^Icon=" "$APP_DIR/app.desktop"; then
+        sed -i '/^Type=Application/a Icon=instagram-bot' "$APP_DIR/app.desktop"
+    fi
+fi
+
 # Build AppImage
 OUTPUT_NAME="${BOT_TYPE}-bot.AppImage"
 echo -e "${YELLOW}Building AppImage...${NC}"
 ARCH=x86_64 "$BUILD_DIR/$APPIMAGETOOL" "$APP_DIR" "$OUTPUT_NAME"
 
-echo -e "${GREEN}✓ AppImage built successfully: ${OUTPUT_NAME}${NC}"
-echo -e "${GREEN}Size: $(du -h "$OUTPUT_NAME" | cut -f1)${NC}"
-
-# Cleanup
-rm -rf "$TEMP_NODE_MODULES"
+if [ -f "$OUTPUT_NAME" ]; then
+    echo -e "${GREEN}✓ AppImage built successfully: ${OUTPUT_NAME}${NC}"
+    echo -e "${GREEN}Size: $(du -h "$OUTPUT_NAME" | cut -f1)${NC}"
+    
+    # Cleanup all temporary files and directories, keep only the AppImage
+    echo -e "${YELLOW}Cleaning up temporary files...${NC}"
+    rm -rf "$TEMP_NODE_MODULES"
+    rm -rf "$BUILD_DIR"
+    rm -rf "$APP_DIR"
+    
+    echo -e "${GREEN}✓ Cleanup complete. Only ${OUTPUT_NAME} remains.${NC}"
+else
+    echo -e "${RED}✗ AppImage build failed!${NC}"
+    exit 1
+fi
 
 echo -e "${GREEN}Done!${NC}"
 
