@@ -8,22 +8,26 @@ Playwright automation that logs into LinkedIn and Instagram, visits configured p
 
 ## Commands
 
-```bash
-npm install                    # install deps
-npm run install-browser        # one-time: playwright install chromium
+This project uses **pnpm** (not npm). `pnpm-lock.yaml` is the committed lockfile.
 
-npm start                      # run LinkedIn bot (tsx src/index.ts)
-npm run start:instagram        # run Instagram bot (tsx src/index-instagram.ts)
-npm run dev                    # LinkedIn with tsx watch
-npm run dev:instagram          # Instagram with tsx watch
-npm run build                  # tsc -> dist/
+```bash
+pnpm install                    # install deps
+pnpm run install-browser        # one-time: playwright install chromium (separate from install!)
+
+pnpm start                      # run LinkedIn bot (tsx src/index.ts)
+pnpm run start:instagram        # run Instagram bot (tsx src/index-instagram.ts)
+pnpm run dev                    # LinkedIn with tsx watch
+pnpm run dev:instagram          # Instagram with tsx watch
+pnpm run build                  # tsc -> dist/
 
 ./run-bot.sh [linkedin|instagram|both]   # wrapper (sources nvm/.bashrc, used by cron); default: both
 
-npm run build:appimage:linkedin          # standalone AppImage (bundles Node 20 + chromium)
-npm run build:appimage:instagram
-npm run build:appimage:all
+pnpm run build:appimage:linkedin         # standalone AppImage (bundles Node 20 + chromium)
+pnpm run build:appimage:instagram
+pnpm run build:appimage:all
 ```
+
+Note: `build-appimage.sh` still calls `npm`/`npx` internally — it runs inside a freshly downloaded, bundled Node 20 during packaging, independent of the dev toolchain.
 
 No test suite and no linter are configured. There is no single-test command.
 

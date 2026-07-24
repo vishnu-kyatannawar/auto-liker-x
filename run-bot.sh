@@ -81,21 +81,21 @@ fi
 cd "$SCRIPT_DIR" || exit 1
 echo "Working directory: $SCRIPT_DIR"
 
-# Check if npm is available
-if ! command -v npm &> /dev/null; then
-    echo "ERROR: npm not found in PATH"
+# Check if pnpm is available
+if ! command -v pnpm &> /dev/null; then
+    echo "ERROR: pnpm not found in PATH"
     echo "PATH: $PATH"
     exit 1
 fi
 
-echo "Using npm: $(which npm)"
+echo "Using pnpm: $(which pnpm)"
 echo "Node version: $(node --version)"
-echo "npm version: $(npm --version)"
-echo "Running: npm run $NPM_COMMAND"
+echo "pnpm version: $(pnpm --version)"
+echo "Running: pnpm run $NPM_COMMAND"
 echo ""
 
-# Run the appropriate npm command
-npm run "$NPM_COMMAND"
+# Run the appropriate pnpm command
+pnpm run "$NPM_COMMAND"
 
 # Log completion
 echo ""

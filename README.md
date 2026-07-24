@@ -20,13 +20,13 @@ Automated tool to monitor LinkedIn pages and Instagram accounts and automaticall
 ### 1. Install Dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 2. Install Playwright Browser
 
 ```bash
-npm run install-browser
+pnpm run install-browser
 ```
 
 ### 3. Configure Environment Variables
@@ -83,7 +83,7 @@ CSV_LOG_PATH=./bot-results.csv
 On your first run, you'll need to complete LinkedIn verification:
 
 ```bash
-npm start
+pnpm start
 ```
 
 1. The browser window will open
@@ -96,7 +96,7 @@ npm start
 After first-time setup, just run:
 
 ```bash
-npm start
+pnpm start
 ```
 
 The bot will:
@@ -107,7 +107,7 @@ The bot will:
 #### Development Mode
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 Runs with auto-restart on file changes.
@@ -119,7 +119,7 @@ Runs with auto-restart on file changes.
 On your first run for Instagram:
 
 ```bash
-npm run start:instagram
+pnpm run start:instagram
 ```
 
 1. The browser window will open
@@ -132,7 +132,7 @@ npm run start:instagram
 After first-time setup, just run:
 
 ```bash
-npm run start:instagram
+pnpm run start:instagram
 ```
 
 The bot will:
@@ -143,7 +143,7 @@ The bot will:
 #### Development Mode
 
 ```bash
-npm run dev:instagram
+pnpm run dev:instagram
 ```
 
 Runs with auto-restart on file changes.
