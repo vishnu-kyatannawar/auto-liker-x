@@ -66,7 +66,9 @@ rm -rf "$TEMP_NODE_MODULES"
 mkdir -p "$TEMP_NODE_MODULES"
 
 echo -e "${YELLOW}Installing npm dependencies...${NC}"
-cp package.json package-lock.json "$TEMP_NODE_MODULES/"
+# Copy only package.json; the project uses pnpm now (no package-lock.json).
+# npm resolves prod deps from package.json and generates its own lockfile here.
+cp package.json "$TEMP_NODE_MODULES/"
 cd "$TEMP_NODE_MODULES"
 npm install --production --no-audit --no-fund
 cd ..
