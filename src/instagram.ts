@@ -46,10 +46,72 @@ export class InstagramBot {
     await this.ensureLoggedIn();
   }
 
+  private async isLoggedIn(): Promise<boolean> {
+    if (!this.page) return false;
+
+    try {
+      // The "Save your login info" screen appears right after a successful login.
+      if (this.page.url().includes('/accounts/onetap/')) return true;
+
+      const indicator = await this.page.$('svg[aria-label="Search"]') ||
+                        await this.page.$('svg[aria-label="Home"]') ||
+                        await this.page.$('a[href*="/direct/inbox/"]');
+      return !!indicator;
+    } catch (e) {
+      // The page can be mid-navigation (e.g. right after submitting 2FA), which
+      // destroys the execution context. Treat as "not yet" and let the caller retry.
+      return false;
+    }
+  }
+
+  // Poll until the user is logged in, or the timeout elapses. Covers auto-login,
+  // 2FA/checkpoint, and fully manual sign-in done in the browser window.
+  private async waitForLogin(timeoutMs: number): Promise<boolean> {
+    if (!this.page) return false;
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (await this.isLoggedIn()) return true;
+      await this.page.waitForTimeout(3000);
+    }
+    return this.isLoggedIn();
+  }
+
+  private async dismissSaveLoginPrompt(): Promise<void> {
+    if (!this.page || !this.page.url().includes('/accounts/onetap/')) return;
+    try {
+      const saveInfoButton = await this.page.$('button:has-text("Save info"), button:has-text("Save Info")');
+      if (saveInfoButton) {
+        await saveInfoButton.click();
+        console.log('✓ Clicked "Save info" button');
+        await this.page.waitForTimeout(2000);
+      }
+    } catch (e) {
+      console.log('Could not find "Save info" button, continuing...');
+    }
+  }
+
+  private async dismissNotificationsPrompt(): Promise<void> {
+    if (!this.page) return;
+    try {
+      const notificationsButton = await this.page.$('button:has-text("Not Now")');
+      if (notificationsButton) {
+        console.log('Handling notifications prompt...');
+        await notificationsButton.click();
+        await this.page.waitForTimeout(2000);
+      }
+    } catch (e) {
+      // Ignore if not found
+    }
+  }
+
   private async ensureLoggedIn(): Promise<void> {
     if (!this.page) throw new Error('Page not initialized');
 
     console.log('Checking Instagram login status...');
+
+    // How long to wait for login/verification to complete (auto or manual). Default 5 min.
+    const loginWaitMinutes = parseInt(process.env.LOGIN_WAIT_MINUTES || '5');
+    const loginWaitMs = loginWaitMinutes * 60 * 1000;
 
     try {
       // Navigate to Instagram
@@ -57,16 +119,9 @@ export class InstagramBot {
         waitUntil: 'domcontentloaded',
         timeout: 60000
       });
-
-      // Wait for page to load
       await this.page.waitForTimeout(3000);
 
-      // Check if already logged in by looking for the search bar or profile icon
-      const isLoggedIn = await this.page.$('svg[aria-label="Search"]') || 
-                         await this.page.$('svg[aria-label="Home"]') ||
-                         await this.page.$('a[href*="/direct/inbox/"]');
-
-      if (isLoggedIn) {
+      if (await this.isLoggedIn()) {
         console.log('Already logged in (session restored)');
         return;
       }
@@ -78,101 +133,48 @@ export class InstagramBot {
         waitUntil: 'domcontentloaded',
         timeout: 60000
       });
-
       await this.page.waitForTimeout(2000);
 
-      // Wait for login form
-      await this.page.waitForSelector('input[name="username"]', { timeout: 10000 });
-
-      // Fill in credentials
-      console.log('Filling in credentials...');
-      await this.page.fill('input[name="username"]', this.username);
-      await this.page.waitForTimeout(500);
-      await this.page.fill('input[name="password"]', this.password);
-      await this.page.waitForTimeout(500);
-
-      // Click login button
-      await this.page.click('button[type="submit"]');
-
-      // Wait for navigation
-      await this.page.waitForTimeout(5000);
-
-      // Check current URL and handle various post-login scenarios
-      const currentUrl = this.page.url();
-
-      // Handle "Save Your Login Info" prompt
-      if (currentUrl.includes('/accounts/onetap/')) {
-        console.log('Handling "Save Login Info" prompt...');
-        try {
-          // Click "Save info" button to save the session
-          const saveInfoButton = await this.page.$('button:has-text("Save info"), button:has-text("Save Info")');
-          if (saveInfoButton) {
-            await saveInfoButton.click();
-            console.log('✓ Clicked "Save info" button');
-            await this.page.waitForTimeout(2000);
-          }
-        } catch (e) {
-          console.log('Could not find "Save info" button, continuing...');
-        }
-      }
-
-      // Handle "Turn on Notifications" prompt
+      // Try to auto-fill credentials. If the form never appears (Instagram may show
+      // a cookie wall, a checkpoint, or a different screen), fall through to manual login.
       try {
-        const notificationsButton = await this.page.$('button:has-text("Not Now")');
-        if (notificationsButton) {
-          console.log('Handling notifications prompt...');
-          await notificationsButton.click();
-          await this.page.waitForTimeout(2000);
-        }
+        await this.page.waitForSelector('input[name="username"]', { timeout: 30000 });
+        console.log('Filling in credentials...');
+        await this.page.fill('input[name="username"]', this.username);
+        await this.page.waitForTimeout(500);
+        await this.page.fill('input[name="password"]', this.password);
+        await this.page.waitForTimeout(500);
+        await this.page.click('button[type="submit"]');
+        await this.page.waitForTimeout(5000);
+
+        await this.dismissSaveLoginPrompt();
+        await this.dismissNotificationsPrompt();
       } catch (e) {
-        // Ignore if not found
+        console.log('Could not auto-fill the login form — complete the login manually in the browser.');
       }
 
-      // Check if login was successful
-      await this.page.waitForTimeout(3000);
-      const finalUrl = this.page.url();
+      // Give the user time to finish: auto-login settling, 2FA/checkpoint, or a
+      // fully manual sign-in. Polls until logged in or the window elapses.
+      if (!(await this.isLoggedIn())) {
+        console.log('\n⚠️  LOGIN / VERIFICATION REQUIRED ⚠️');
+        console.log('Complete the login (and any 2FA/checkpoint) in the browser window.');
+        console.log(`Waiting up to ${loginWaitMinutes} minutes for you to finish...\n`);
 
-      if (finalUrl.includes('/challenge/') || finalUrl.includes('/two_factor')) {
-        console.log('\n⚠️  VERIFICATION REQUIRED ⚠️');
-        console.log('Please complete the verification in the browser window.');
-        console.log('Waiting for you to complete verification...\n');
-
-        // Wait for user to complete verification (max 5 minutes)
-        // Instagram might redirect to onetap or home page
-        try {
-          await this.page.waitForURL(/\/(accounts\/onetap\/|$)/, { timeout: 300000 });
-          console.log('✓ Verification completed!');
-        } catch (e) {
-          console.log('Verification wait timeout, checking current page...');
+        const ok = await this.waitForLogin(loginWaitMs);
+        if (!ok) {
+          throw new Error(`Login not completed within ${loginWaitMinutes} minutes.`);
         }
-        
-        await this.page.waitForTimeout(2000);
-      } else if (finalUrl.includes('/accounts/login/')) {
-        throw new Error('Login failed. Please check credentials.');
+        console.log('✓ Login detected! Session saved for future runs.');
       } else {
         console.log('Successfully logged in to Instagram');
       }
 
-      // Handle "Save Your Login Info" prompt after verification (appears at /accounts/onetap/)
-      const postVerificationUrl = this.page.url();
-      if (postVerificationUrl.includes('/accounts/onetap/')) {
-        console.log('Handling "Save Login Info" prompt after verification...');
-        try {
-          const saveInfoButton = await this.page.$('button:has-text("Save info"), button:has-text("Save Info")');
-          if (saveInfoButton) {
-            await saveInfoButton.click();
-            console.log('✓ Clicked "Save info" button');
-            await this.page.waitForTimeout(2000);
-          }
-        } catch (e) {
-          console.log('Could not find "Save info" button, continuing...');
-        }
-      }
+      // Dismiss the post-login "Save info" prompt so the session persists to disk.
+      await this.dismissSaveLoginPrompt();
     } catch (error) {
       if (error instanceof Error && error.message.includes('Timeout')) {
         console.log('⚠️  Page load timeout - checking current status...');
-        const url = this.page.url();
-        if (!url.includes('/accounts/login/')) {
+        if (await this.isLoggedIn()) {
           console.log('Appears to be logged in despite timeout');
           return;
         }
