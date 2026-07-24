@@ -195,6 +195,7 @@ CHECK_INTERVAL_MINUTES=60
 HEADLESS=false
 RUN_ONCE=false
 CSV_LOG_PATH=./bot-results.csv
+ENABLE_NOTIFICATIONS=true
 ENV_EOF
 else
     cat > "$APP_DIR/.env.example" << 'ENV_EOF'
@@ -208,6 +209,7 @@ CHECK_INTERVAL_MINUTES=60
 HEADLESS=false
 RUN_ONCE=false
 CSV_LOG_PATH=./bot-results.csv
+ENABLE_NOTIFICATIONS=true
 ENV_EOF
 fi
 

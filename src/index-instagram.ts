@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { InstagramBot } from './instagram';
-import CSVLogger from './csvLogger';
+import CSVLogger, { RunResult } from './csvLogger';
+import { notifyRunComplete } from './notifier';
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ async function main() {
 
 async function runBot(username: string, password: string, accounts: string[], headless: boolean, csvLogger: CSVLogger) {
   const bot = new InstagramBot(username, password, headless);
+  const results: RunResult[] = [];
 
   try {
     await bot.initialize();
@@ -69,8 +71,7 @@ async function runBot(username: string, password: string, accounts: string[], he
     for (const accountUrl of accounts) {
       const result = await bot.checkPageForNewPosts(accountUrl);
 
-      // Log to CSV
-      csvLogger.logResult({
+      const runResult: RunResult = {
         timestamp: '', // Will be set by CSVLogger
         platform: 'Instagram',
         page: result.page,
@@ -79,7 +80,10 @@ async function runBot(username: string, password: string, accounts: string[], he
         failedPosts: result.failedPosts,
         status: result.status,
         errorMessage: result.errorMessage
-      });
+      };
+
+      csvLogger.logResult(runResult);
+      results.push(runResult);
     }
 
     console.log(`\n✓ All accounts checked. Results logged to CSV.`);
@@ -87,8 +91,7 @@ async function runBot(username: string, password: string, accounts: string[], he
   } catch (error) {
     console.error('Error running bot:', error);
 
-    // Log error to CSV
-    csvLogger.logResult({
+    const errorResult: RunResult = {
       timestamp: '',
       platform: 'Instagram',
       page: 'ALL',
@@ -97,10 +100,16 @@ async function runBot(username: string, password: string, accounts: string[], he
       failedPosts: 0,
       status: 'ERROR',
       errorMessage: error instanceof Error ? error.message : 'Unknown error'
-    });
+    };
+
+    csvLogger.logResult(errorResult);
+    results.push(errorResult);
   } finally {
     await bot.close();
   }
+
+  // Notify the desktop with the run summary (works in headless/cron runs too).
+  notifyRunComplete('Instagram', results);
 }
 
 // Handle graceful shutdown

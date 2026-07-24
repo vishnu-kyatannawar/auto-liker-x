@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { LinkedInBot } from './linkedin';
-import CSVLogger from './csvLogger';
+import CSVLogger, { RunResult } from './csvLogger';
+import { notifyRunComplete } from './notifier';
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ async function main() {
 
 async function runBot(email: string, password: string, pages: string[], headless: boolean, csvLogger: CSVLogger) {
   const bot = new LinkedInBot(email, password, headless);
+  const results: RunResult[] = [];
 
   try {
     await bot.initialize();
@@ -69,8 +71,7 @@ async function runBot(email: string, password: string, pages: string[], headless
     for (const pageUrl of pages) {
       const result = await bot.checkPageForNewPosts(pageUrl);
 
-      // Log to CSV
-      csvLogger.logResult({
+      const runResult: RunResult = {
         timestamp: '', // Will be set by CSVLogger
         platform: 'LinkedIn',
         page: result.page,
@@ -79,7 +80,10 @@ async function runBot(email: string, password: string, pages: string[], headless
         failedPosts: result.failedPosts,
         status: result.status,
         errorMessage: result.errorMessage
-      });
+      };
+
+      csvLogger.logResult(runResult);
+      results.push(runResult);
     }
 
     console.log(`\n✓ All pages checked. Results logged to CSV.`);
@@ -87,8 +91,7 @@ async function runBot(email: string, password: string, pages: string[], headless
   } catch (error) {
     console.error('Error running bot:', error);
 
-    // Log error to CSV
-    csvLogger.logResult({
+    const errorResult: RunResult = {
       timestamp: '',
       platform: 'LinkedIn',
       page: 'ALL',
@@ -97,10 +100,16 @@ async function runBot(email: string, password: string, pages: string[], headless
       failedPosts: 0,
       status: 'ERROR',
       errorMessage: error instanceof Error ? error.message : 'Unknown error'
-    });
+    };
+
+    csvLogger.logResult(errorResult);
+    results.push(errorResult);
   } finally {
     await bot.close();
   }
+
+  // Notify the desktop with the run summary (works in headless/cron runs too).
+  notifyRunComplete('LinkedIn', results);
 }
 
 // Handle graceful shutdown
