@@ -41,7 +41,13 @@ function sendDesktopNotification(title: string, body: string, critical: boolean)
   try {
     const child = spawn(
       'notify-send',
-      ['--app-name=Auto-Liker', `--urgency=${critical ? 'critical' : 'normal'}`, title, body],
+      [
+        '--app-name=Auto-Liker',
+        `--urgency=${critical ? 'critical' : 'normal'}`,
+        '--expire-time=0', // 0 = stay on screen until the user dismisses it
+        title,
+        body,
+      ],
       { env: notificationEnv(), stdio: 'ignore' }
     );
     // notify-send missing / no session bus: log but never crash the run.
