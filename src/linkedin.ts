@@ -51,8 +51,10 @@ export class LinkedInBot {
     console.log('Performing login...');
 
     try {
-      // Always go to login page
-      await this.page.goto('https://www.linkedin.com/login', {
+      // Probe the feed first: a valid session stays on /feed/, an expired one is
+      // redirected away. /login is not used for this check because LinkedIn no
+      // longer redirects logged-in sessions from it (it serves a Cloudflare page).
+      await this.page.goto('https://www.linkedin.com/feed/', {
         waitUntil: 'domcontentloaded',
         timeout: 60000
       });
@@ -60,11 +62,20 @@ export class LinkedInBot {
       // Wait for page to load
       await this.page.waitForTimeout(2000);
 
-      // Check if already logged in (LinkedIn might redirect to feed)
-      const currentUrl = this.page.url();
-      if (currentUrl.includes('/feed/')) {
+      if (this.page.url().includes('/feed/')) {
         console.log('Already logged in (session restored)');
         return;
+      }
+
+      await this.page.goto('https://www.linkedin.com/login', {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000
+      });
+      await this.page.waitForTimeout(2000);
+
+      const title = await this.page.title();
+      if (title.includes('Cloudflare') || title.includes('Attention Required')) {
+        throw new Error('LinkedIn login page blocked by Cloudflare. Log in once with HEADLESS=false to refresh the session.');
       }
 
       // Fill in credentials
