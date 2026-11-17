@@ -61,6 +61,13 @@ Login is deliberately tolerant: it probes for logged-in indicators first and onl
 
 `PageResult.status` is derived at the end of each page: `SUCCESS`, `PARTIAL` (some fails but ≥1 success), `ERROR` (all failed, or thrown), or `TIMEOUT` (page navigation timed out). This value flows straight into the CSV `Status` column.
 
+A broken run must never look like a quiet hour (LinkedIn served Cloudflare's "Just a moment..." page for 6 days in Nov 2026 while every run logged SUCCESS with 0 posts):
+
+- **LinkedIn block pages are ERROR.** `detectBlockPage()` checks the title, the `challenges.cloudflare.com` iframe and the "Verify you are human" text, plus sign-in URLs (`authwall`, `login`, `checkpoint`) when checking a company page. The CSV reason carries the fix (run once with `HEADLESS=false`) and a screenshot path under `error-screenshots/` (newest 50 kept).
+- **A LinkedIn page with no posts at all is ERROR**, not SUCCESS: it means a block page or a DOM change.
+- **Notifications** (`notifier.ts`): any ERROR/TIMEOUT page raises `sendErrorNotification`, a critical popup with a sound that stays until dismissed and replaces the previous error popup (id kept in `.last-error-notification-<platform>`). A clean run that liked nothing shows no popup unless `NOTIFY_WHEN_NOTHING_NEW=true`.
+- **Crashes** go through `failRun()` in both entry points: error popup, then exit code **2** ("already alerted"). The cron lines alert on any other non-zero exit (e.g. the AppImage failing to start) with their own `notify-send`.
+
 ## Scheduling
 
 `setup-*-cron.sh` scripts install crontab entries that invoke `run-bot.sh` (which sources nvm/.bashrc so cron has a working `node`/`npm`). Cron runs assume `RUN_ONCE=true`. `both-bots-cron.log` and `bot-results.csv` are runtime output committed in the repo root.

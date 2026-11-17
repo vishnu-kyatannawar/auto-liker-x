@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { InstagramBot } from './instagram';
 import CSVLogger, { RunResult } from './csvLogger';
-import { notifyRunComplete } from './notifier';
+import { notifyRunComplete, failRun } from './notifier';
 
 dotenv.config();
 
@@ -123,6 +123,7 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-main().catch(console.error);
+process.on('unhandledRejection', (reason) => failRun('Instagram', reason));
+main().catch((error) => failRun('Instagram', error));
 
 

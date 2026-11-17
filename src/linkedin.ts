@@ -1,5 +1,10 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
+import fs from 'fs';
 import path from 'path';
+
+const CLOUDFLARE_FIX = 'Run the bot once with HEADLESS=false and tick "Verify you are human".';
+const SIGN_IN_FIX = 'Run the bot once with HEADLESS=false and sign in.';
+const MAX_ERROR_SCREENSHOTS = 50;
 
 export interface PageResult {
   page: string;
@@ -61,6 +66,14 @@ export class LinkedInBot {
 
       // Wait for page to load
       await this.page.waitForTimeout(2000);
+
+      // A Cloudflare check keeps the /feed/ URL, so the URL alone can't prove a
+      // working session (this is how the bot reported "logged in" while blocked).
+      const blocked = await this.detectBlockPage(false);
+      if (blocked) {
+        const shot = await this.saveErrorScreenshot('feed');
+        throw new Error(`${blocked}${shot ? ` Screenshot: ${shot}` : ''}`);
+      }
 
       if (this.page.url().includes('/feed/')) {
         console.log('Already logged in (session restored)');
@@ -146,6 +159,15 @@ export class LinkedInBot {
       // Wait for posts to load
       await this.page.waitForTimeout(3000);
 
+      const blocked = await this.detectBlockPage();
+      if (blocked) {
+        const shot = await this.saveErrorScreenshot(pageUrl);
+        result.status = 'ERROR';
+        result.errorMessage = `${blocked}${shot ? ` Screenshot: ${shot}` : ''}`;
+        console.error(`✗ ${result.errorMessage}`);
+        return result;
+      }
+
       // Sort posts by Recent
       await this.sortByRecent();
 
@@ -171,6 +193,17 @@ export class LinkedInBot {
       // Get all posts
       const allPosts = await this.page.$$('div[data-urn*="activity"]');
       console.log(`Found ${allPosts.length} total posts on the page`);
+
+      // The monitored pages always have posts, so none at all means the page
+      // didn't render its feed (blocked, signed out, or a LinkedIn layout change).
+      if (allPosts.length === 0) {
+        const shot = await this.saveErrorScreenshot(pageUrl);
+        result.status = 'ERROR';
+        result.errorMessage = `No posts found on the page (title: "${await this.page.title()}"); ` +
+          `LinkedIn blocked the page or changed its layout.${shot ? ` Screenshot: ${shot}` : ''}`;
+        console.error(`✗ ${result.errorMessage}`);
+        return result;
+      }
 
       // Find the index of the last liked post in current DOM
       let lastLikedIndex = -1;
@@ -355,6 +388,59 @@ export class LinkedInBot {
       return null; // No liked post found
     } catch (error) {
       console.error('Error finding last liked post:', error);
+      return null;
+    }
+  }
+
+  // Returns a reason when LinkedIn served a bot check or a sign-in wall instead of
+  // the requested page, else null.
+  // includeSignIn=false during login, where a redirect to /login is expected and
+  // handled by filling in the credentials.
+  private async detectBlockPage(includeSignIn: boolean = true): Promise<string | null> {
+    if (!this.page) return null;
+    try {
+      const url = this.page.url();
+      if (includeSignIn && /\/(authwall|login|checkpoint|uas\/login)/.test(url)) {
+        return `LinkedIn sent the bot to a sign-in page (${url}); the saved session is no longer valid. ${SIGN_IN_FIX}`;
+      }
+      const title = await this.page.title();
+      const challengeFrame = await this.page.$('iframe[src*="challenges.cloudflare.com"]');
+      const bodyText = await this.page.evaluate(() => document.body?.innerText?.slice(0, 2000) || '');
+      if (
+        /just a moment|attention required|cloudflare/i.test(title) ||
+        challengeFrame ||
+        /performing security verification|verify you are human/i.test(bodyText)
+      ) {
+        return `LinkedIn is showing a Cloudflare security check ("${title}") instead of the page. ${CLOUDFLARE_FIX}`;
+      }
+    } catch {
+      // page mid-navigation: let the normal flow decide
+    }
+    return null;
+  }
+
+  // Saves what the browser shows for later review; keeps the newest few dozen.
+  private async saveErrorScreenshot(label: string): Promise<string | null> {
+    if (!this.page) return null;
+    try {
+      const dir = path.join(process.cwd(), 'error-screenshots');
+      fs.mkdirSync(dir, { recursive: true });
+      let name = label;
+      try {
+        name = new URL(label).pathname.split('/').filter(Boolean)[1] || label;
+      } catch {
+        // label is not a URL
+      }
+      const stamp = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().replace(/[:T]/g, '-').slice(0, 19);
+      const file = path.join(dir, `linkedin-${stamp}-${name.replace(/[^\w.-]/g, '_')}.png`);
+      await this.page.screenshot({ path: file });
+      const old = fs.readdirSync(dir).filter((f) => f.startsWith('linkedin-')).sort();
+      for (const f of old.slice(0, Math.max(0, old.length - MAX_ERROR_SCREENSHOTS))) {
+        fs.unlinkSync(path.join(dir, f));
+      }
+      return file;
+    } catch (e) {
+      console.log(`(screenshot failed: ${e instanceof Error ? e.message : 'unknown error'})`);
       return null;
     }
   }

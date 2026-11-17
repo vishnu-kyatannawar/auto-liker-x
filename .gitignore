@@ -17,3 +17,7 @@ AppDir-*/
 temp-node-modules-*/
 *.AppImage
 test-browsers/
+
+# Runtime error output (error popups / block-page screenshots)
+error-screenshots/
+.last-error-notification-*

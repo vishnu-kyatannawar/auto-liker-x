@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { LinkedInBot } from './linkedin';
 import CSVLogger, { RunResult } from './csvLogger';
-import { notifyRunComplete } from './notifier';
+import { notifyRunComplete, failRun } from './notifier';
 
 dotenv.config();
 
@@ -123,4 +123,5 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-main().catch(console.error);
+process.on('unhandledRejection', (reason) => failRun('LinkedIn', reason));
+main().catch((error) => failRun('LinkedIn', error));
