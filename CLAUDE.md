@@ -70,7 +70,9 @@ A broken run must never look like a quiet hour (LinkedIn served Cloudflare's "Ju
 
 ## Scheduling
 
-`setup-*-cron.sh` scripts install crontab entries that invoke `run-bot.sh` (which sources nvm/.bashrc so cron has a working `node`/`npm`). Cron runs assume `RUN_ONCE=true`. `both-bots-cron.log` and `bot-results.csv` are runtime output committed in the repo root.
+`setup-*-cron.sh` scripts install crontab entries that invoke `run-bot.sh` (which sources nvm/.bashrc so cron has a working `node`/`npm`). Cron runs assume `RUN_ONCE=true`.
+
+The deployed LinkedIn AppImage (`~/apps/linked-bot`) runs from cron through `run-visible.sh` with `HEADLESS=false`: since Nov 2026 LinkedIn's Cloudflare check blocks headless Chromium even with a verified profile, while a visible browser passes. The wrapper takes the display variables from the running Plasma session and skips the run (exit 3) when nobody is logged in. Do not try to get headless past the check by disguising the browser (user agent, automation flags). `both-bots-cron.log` and `bot-results.csv` are runtime output committed in the repo root.
 
 ## Conventions
 
