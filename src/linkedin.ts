@@ -1,6 +1,7 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import fs from 'fs';
 import path from 'path';
+import { windowOptions } from './browserWindow';
 
 const CLOUDFLARE_FIX = 'Run the bot once with HEADLESS=false and tick "Verify you are human".';
 const SIGN_IN_FIX = 'Run the bot once with HEADLESS=false and sign in.';
@@ -38,7 +39,7 @@ export class LinkedInBot {
     this.context = await chromium.launchPersistentContext(this.userDataDir, {
       headless: this.headless,
       slowMo: this.headless ? 0 : 100,
-      viewport: { width: 1920, height: 1080 },
+      ...windowOptions(this.headless),
     });
 
     this.browser = this.context.browser()!;

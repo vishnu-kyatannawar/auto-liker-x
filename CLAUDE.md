@@ -35,11 +35,12 @@ Behavior is driven entirely by `.env` (see `.env.example`), not CLI flags. Key v
 
 ## Architecture
 
-Five source files in `src/`, structured as two mirror-image bots plus shared logging:
+Seven source files in `src/`, structured as two mirror-image bots plus shared logging, notifications and window options:
 
 - `index.ts` / `index-instagram.ts` — entry points. Each validates env, parses the page list, then calls its bot in a `runBot` loop. `RUN_ONCE` chooses single-run-then-exit vs. `setInterval` continuous mode. Every page result is written to CSV via the shared logger.
 - `linkedin.ts` (`LinkedInBot`) / `instagram.ts` (`InstagramBot`) — the two bot classes. They intentionally do NOT share a base class or interface despite near-identical shape (constructor, `initialize`, `ensureLoggedIn`, `checkPageForNewPosts`, `likePost`, `close`, and a duplicated `PageResult` interface). When changing shared behavior, expect to edit both files.
-- `csvLogger.ts` (`CSVLogger`) — the one genuinely shared module. Appends rows with IST timestamps (UTC+5:30, computed by offsetting the Date manually), creates the file+headers and parent dir on construction, and CSV-escapes fields.
+- `browserWindow.ts` — browser window options shared by both bots: headless keeps an emulated 1920x1080 viewport; a visible run opens a real 1280x800 window (`viewport: null`) with the class `auto-liker-bot` for the KWin rule (see Scheduling).
+- `csvLogger.ts` (`CSVLogger`) — shared CSV logging. Appends rows with IST timestamps (UTC+5:30, computed by offsetting the Date manually), creates the file+headers and parent dir on construction, and CSV-escapes fields.
 
 ### The "no local state" liking strategy
 
@@ -73,6 +74,8 @@ A broken run must never look like a quiet hour (LinkedIn served Cloudflare's "Ju
 `setup-*-cron.sh` scripts install crontab entries that invoke `run-bot.sh` (which sources nvm/.bashrc so cron has a working `node`/`npm`). Cron runs assume `RUN_ONCE=true`.
 
 The deployed LinkedIn AppImage (`~/apps/linked-bot`) runs from cron through `run-visible.sh` with `HEADLESS=false`: since Nov 2026 LinkedIn's Cloudflare check blocks headless Chromium even with a verified profile, while a visible browser passes. The wrapper takes the display variables from the running Plasma session and skips the run (exit 3) when nobody is logged in. Do not try to get headless past the check by disguising the browser (user agent, automation flags). `both-bots-cron.log` and `bot-results.csv` are runtime output committed in the repo root.
+
+So a visible cron run doesn't disturb the desktop, `setup-kwin-rule.sh` installs a KWin rule (run it once per machine) matching window class `auto-liker-bot`. It forces "Accept focus: No" and focus stealing prevention to Extreme (on Wayland, Chromium still took focus with Extreme alone). The window also opens below other windows and off the taskbar, pager and Alt+Tab, applied only initially so it can still be raised. Mouse clicks still reach it, e.g. to tick a Cloudflare check.
 
 ## Conventions
 

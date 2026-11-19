@@ -1,5 +1,6 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
 import path from 'path';
+import { windowOptions } from './browserWindow';
 
 export interface PageResult {
   page: string;
@@ -33,7 +34,7 @@ export class InstagramBot {
     this.context = await chromium.launchPersistentContext(this.userDataDir, {
       headless: this.headless,
       slowMo: this.headless ? 0 : 100,
-      viewport: { width: 1920, height: 1080 },
+      ...windowOptions(this.headless),
       userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     });
 
